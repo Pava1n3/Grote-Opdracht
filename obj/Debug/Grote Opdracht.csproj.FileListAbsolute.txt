@@ -1,0 +1,6 @@
+C:\Users\Marijn\Documents\INFOOPT\Grote Opdracht\bin\Debug\Grote Opdracht.exe.config
+C:\Users\Marijn\Documents\INFOOPT\Grote Opdracht\bin\Debug\Grote Opdracht.exe
+C:\Users\Marijn\Documents\INFOOPT\Grote Opdracht\bin\Debug\Grote Opdracht.pdb
+C:\Users\Marijn\Documents\INFOOPT\Grote Opdracht\obj\Debug\Grote Opdracht.csprojResolveAssemblyReference.cache
+C:\Users\Marijn\Documents\INFOOPT\Grote Opdracht\obj\Debug\Grote Opdracht.exe
+C:\Users\Marijn\Documents\INFOOPT\Grote Opdracht\obj\Debug\Grote Opdracht.pdb
