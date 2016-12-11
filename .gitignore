@@ -45,3 +45,8 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+bin/Debug/Grote Opdracht.exe
+bin/Debug/Grote Opdracht.exe
+*.pdb
+bin/Debug/Grote Opdracht.vshost.exe.manifest
+obj/Debug/Grote Opdracht.exe
