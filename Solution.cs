@@ -9,7 +9,7 @@ namespace Grote_Opdracht
     public class Solution    //describes a solution for the trash collection
     {
         public int cost = 0;
-        public List<List<Job>> schedule = new List<List<Job>>();
+        public List<List<List<Job>>> schedule = new List<List<List<Job>>>();
 
         public Solution()
         {
@@ -17,31 +17,37 @@ namespace Grote_Opdracht
 
         public int CalculateCost(OrderMatrix orderMatrix, DistanceMatrix distanceMatrix)  //This version of the method might be a bit costly
         {
-            foreach (List<Job> jobList in schedule)
+            foreach (List<List<Job>> bigList in schedule)
             {
-                foreach (Job job in jobList)
-                {
-                    cost += orderMatrix.GetOrderMatrix()[job.ordernr].totalEmptyingTime;   //Add the total emptying time
-                    cost += distanceMatrix.GetDistanceMatrix()[orderMatrix.GetOrderMatrix()[job.previousJob.ordernr].matrixId, orderMatrix.GetOrderMatrix()[job.ordernr].matrixId];           //Add the traveling time
-
-                }
-            }
-
-            foreach (KeyValuePair<int, Order> orderTuple in orderMatrix.GetOrderMatrix())
-            {
-                bool contains = false;
-
-                foreach (List<Job> jobList in schedule)
+                foreach (List<Job> jobList in bigList)
                 {
                     foreach (Job job in jobList)
                     {
-                        if (job.ordernr == orderTuple.Key)
-                            contains = true; ;
+                        cost += orderMatrix.GetOrderMatrix()[job.ordernr].totalEmptyingTime;   //Add the total emptying time
+                        if (jobList[0] != job)
+                            cost += distanceMatrix.GetDistanceMatrix()[orderMatrix.GetOrderMatrix()[jobList[jobList.IndexOf(job) - 1].ordernr].matrixId, orderMatrix.GetOrderMatrix()[job.ordernr].matrixId];           //Add the traveling time
                     }
                 }
+            }
 
-                if (!contains)
-                    cost += orderTuple.Value.totalEmptyingTime * 3;
+            foreach (List<List<Job>> bigList in schedule)
+            {
+                foreach (KeyValuePair<int, Order> orderTuple in orderMatrix.GetOrderMatrix())
+                {
+                    bool contains = false;
+
+                    foreach (List<Job> jobList in bigList)
+                    {
+                        foreach (Job job in jobList)
+                        {
+                            if (job.ordernr == orderTuple.Key)
+                                contains = true; ;
+                        }
+                    }
+
+                    if (!contains)
+                        cost += orderTuple.Value.totalEmptyingTime * 3;
+                }
             }
 
             return cost;
@@ -52,24 +58,38 @@ namespace Grote_Opdracht
         {
             int load = 0;
 
-            foreach (List<Job> jobList in schedule)
+            foreach (List<List<Job>> bigList in schedule)
             {
-                foreach (Job job in jobList)
+                foreach (List<Job> jobList in bigList)
                 {
-                    if (orderMatrix.GetOrderMatrix()[job.ordernr].matrixId == 0)
-                        load = 0;
-                    else
+                    foreach (Job job in jobList)
                     {
-                        load += orderMatrix.GetOrderMatrix()[job.ordernr].volumeOfOneContainer * orderMatrix.GetOrderMatrix()[job.ordernr].numberOfContainers;
+                        if (orderMatrix.GetOrderMatrix()[job.ordernr].matrixId == 0)
+                            load = 0;
+                        else
+                        {
+                            load += orderMatrix.GetOrderMatrix()[job.ordernr].volumeOfOneContainer * orderMatrix.GetOrderMatrix()[job.ordernr].numberOfContainers;
 
-                        if (load > 100000)
-                            return false;
+                            if (load > 100000)
+                                return false;
+                        }
                     }
                 }
             }
 
             return false;
         }
+
+        public void AddJob(int day, int ordernr, int vehicle)
+        { 
+            
+        }
+
+        public void RemoveJob()
+        { }
+
+        public void SwapJobs()
+        { }
 
         public int Cost
         {
