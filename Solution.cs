@@ -23,10 +23,52 @@ namespace Grote_Opdracht
                 {
                     cost += orderMatrix.GetOrderMatrix()[job.ordernr].totalEmptyingTime;   //Add the total emptying time
                     cost += distanceMatrix.GetDistanceMatrix()[orderMatrix.GetOrderMatrix()[job.previousJob.ordernr].matrixId, orderMatrix.GetOrderMatrix()[job.ordernr].matrixId];           //Add the traveling time
+
                 }
             }
 
+            foreach (KeyValuePair<int, Order> orderTuple in orderMatrix.GetOrderMatrix())
+            {
+                bool contains = false;
+
+                foreach (List<Job> jobList in schedule)
+                {
+                    foreach (Job job in jobList)
+                    {
+                        if (job.ordernr == orderTuple.Key)
+                            contains = true; ;
+                    }
+                }
+
+                if (!contains)
+                    cost += orderTuple.Value.totalEmptyingTime * 3;
+            }
+
             return cost;
+        }
+
+
+        public Boolean IsFeasible(OrderMatrix orderMatrix, DistanceMatrix distanceMatrix)
+        {
+            int load = 0;
+
+            foreach (List<Job> jobList in schedule)
+            {
+                foreach (Job job in jobList)
+                {
+                    if (orderMatrix.GetOrderMatrix()[job.ordernr].matrixId == 0)
+                        load = 0;
+                    else
+                    {
+                        load += orderMatrix.GetOrderMatrix()[job.ordernr].volumeOfOneContainer * orderMatrix.GetOrderMatrix()[job.ordernr].numberOfContainers;
+
+                        if (load > 100000)
+                            return false;
+                    }
+                }
+            }
+
+            return false;
         }
 
         public int Cost
