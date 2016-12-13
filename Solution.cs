@@ -72,6 +72,18 @@ namespace Grote_Opdracht
             return false;
         }
 
+        public int CalculateTruckLoad(int day, OrderMatrix orderMatrix)
+        {
+            int load = 0;
+
+            foreach(Job job in schedule[day])
+            {
+                load += orderMatrix.GetOrderMatrix()[job.ordernr].volumeOfOneContainer * orderMatrix.GetOrderMatrix()[job.ordernr].numberOfContainers;
+            }
+
+            return load;
+        }
+
         public void AddJob(int day, int ordernr, int vehicle, OrderMatrix orderMatrix)
         { 
             if(orderMatrix.GetOrderMatrix()[ordernr].frequency > 1)
@@ -79,7 +91,14 @@ namespace Grote_Opdracht
                 if(orderMatrix.GetOrderMatrix()[ordernr].frequency == 2)
                 {
                     if (day == 1)
-                        ;//if plausible on mo, force plan it
+                    {
+                        //if plausible on mo, force plan it
+
+                        //possible if: does not overencumber -> trip to depot
+                        //             total time does not exceed a day
+
+
+                    }
                     else if (day == 2)
                         ;//if plausible on tu, force plan it
                 }
