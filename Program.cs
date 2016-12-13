@@ -12,38 +12,17 @@ namespace Grote_Opdracht
 {
     class Program
     {
-        public static Dictionary<string, Tuple<int, int>> distanceMatrix = new Dictionary<string, Tuple<int, int>>(); //This is the dictionairy we will store the AfstandenMatrix in. 
+        
 
         static void Main(string[] args)
         {
-            StreamReader distanceMatrixReader = new StreamReader(@"..\..\AfstandenMatrix.txt");   //Streamreaders can read from a text file
+            OrderMatrix oM = new OrderMatrix();
+            DistanceMatrix dM = new DistanceMatrix();
 
-            #region ReadDistanceMatrix
-            string distanceMatrixIndex;
-
-            distanceMatrixReader.ReadLine();    //The first read is here because the first line is "MatrixID1;MatrixID2;Afstand;Rijtijd" and we don't need that line, by doing this we skip over it
-            string distanceMatrixRead = distanceMatrixReader.ReadLine();    //We read a line from the text file
-            string[] distanceMatrixLine;
-
-            while(distanceMatrixRead != null)   //Goes over the whole text file and places each line in the array
-            {
-                distanceMatrixLine = distanceMatrixRead.Split(';');    //Split a string in pieces that are delimited by a semicolon (e.g. "hello;world;!" become an array [hello, world, !])
-                distanceMatrixIndex = distanceMatrixLine[0] + ';' +  distanceMatrixLine[1];     //This is a dictionary that uses a string as a key, the key being a concatenation of MatrixID1 and MatrixID2
-
-                distanceMatrix[distanceMatrixIndex] = new Tuple<int,int>(Convert.ToInt32(distanceMatrixLine[2]), Convert.ToInt16(distanceMatrixLine[3]));    //Distance in meters and travel time in seconds
-
-                distanceMatrixRead = distanceMatrixReader.ReadLine();
-            }
-
-            Console.WriteLine("We read the whole distance Matrix!");
-            #endregion 
-
-
+            oM.SetUpOrderMatrix();
+            dM.SetUpDistanceMatrix();
 
             //beginoplossing maken
-
-            //kostenfunctie
-
 
 
             /*AFSTANDEN MATRIX
@@ -63,8 +42,6 @@ namespace Grote_Opdracht
 
 
             StreamWriter sw = new StreamWriter("Solution.txt");
-
-
         }
     }
 
@@ -72,21 +49,21 @@ namespace Grote_Opdracht
     public class Solution    //describes a solution for the trash collection
     {
         public int cost = 0;
-        public List<Job> schedule = new List<Job>();
+        public List<List<Job>> schedule = new List<List<Job>>();
 
         public Solution()
         {
         }
 
-        public int CalculateCost()  //This version of the method might be a bit costly
+        public int CalculateCost(OrderMatrix orderMatrix, DistanceMatrix distanceMatrix)  //This version of the method might be a bit costly
         {
-            string distanceMatrixKey;
-
-            foreach(Job job in schedule)
+            foreach (List<Job> jobList in schedule)
             {
-                cost += OrderMatrix.orderMatrix[job.ordernr].totalEmptyingTime;   //Add the total emptying time
-                distanceMatrixKey = OrderMatrix.orderMatrix[job.previousJob.ordernr].matrixId.ToString() + ";" + OrderMatrix.orderMatrix[job.ordernr].matrixId.ToString();
-                cost += Program.distanceMatrix[distanceMatrixKey].Item1;           //Add the traveling time
+                foreach (Job job in jobList)
+                {
+                    cost += orderMatrix.GetOrderMatrix()[job.ordernr].totalEmptyingTime;   //Add the total emptying time
+                    cost += distanceMatrix.GetDistanceMatrix()[orderMatrix.GetOrderMatrix()[job.previousJob.ordernr].matrixId, orderMatrix.GetOrderMatrix()[job.ordernr].matrixId];           //Add the traveling time
+                }
             }
 
             return cost;
@@ -94,7 +71,7 @@ namespace Grote_Opdracht
 
         public int Cost
         {
-            get { if (cost == 0) return CalculateCost(); else return cost; }
+            get{ return cost; }
         }
     }
 
@@ -133,12 +110,46 @@ namespace Grote_Opdracht
 
     }
 
-    public static class OrderMatrix
+    public class DistanceMatrix
     {
-        public static Dictionary<int, Order> orderMatrix = new Dictionary<int, Order>();
+        //public static Dictionary<string, Tuple<int, int>> distanceMatrix = new Dictionary<string, Tuple<int, int>>(); //This is the dictionairy we will store the AfstandenMatrix in. 
+        public int[,] distanceMatrix = new int[1099, 1099];
+
+        StreamReader distanceMatrixReader = new StreamReader(@"..\..\AfstandenMatrix.txt");   //Streamreaders can read from a text file
+        //string distanceMatrixIndex;
+
+        public void SetUpDistanceMatrix()
+        {
+            distanceMatrixReader.ReadLine();    //The first read is here because the first line is "MatrixID1;MatrixID2;Afstand;Rijtijd" and we don't need that line, by doing this we skip over it
+            string distanceMatrixRead = distanceMatrixReader.ReadLine();    //We read a line from the text file
+            string[] distanceMatrixLine;
+
+            while (distanceMatrixRead != null)   //Goes over the whole text file and places each line in the array
+            {
+                distanceMatrixLine = distanceMatrixRead.Split(';');    //Split a string in pieces that are delimited by a semicolon (e.g. "hello;world;!" become an array [hello, world, !])
+                //distanceMatrixIndex = distanceMatrixLine[0] + ';' + distanceMatrixLine[1];     //This is a dictionary that uses a string as a key, the key being a concatenation of MatrixID1 and MatrixID2
+
+                //distanceMatrix[distanceMatrixIndex] = new Tuple<int, int>(Convert.ToInt32(distanceMatrixLine[2]), Convert.ToInt16(distanceMatrixLine[3]));    //Distance in meters and travel time in seconds
+                distanceMatrix[Convert.ToInt32(distanceMatrixLine[0]), Convert.ToInt32(distanceMatrixLine[1])] = Convert.ToInt16(distanceMatrixLine[3]);
+
+                distanceMatrixRead = distanceMatrixReader.ReadLine();
+            }
+
+            Console.WriteLine("We read the whole distance Matrix!");
+        }
+
+        public int[,] GetDistanceMatrix()
+        {
+            return distanceMatrix;
+        }
+    }
+
+    public class OrderMatrix
+    {
+        public Dictionary<int, Order> orderMatrix = new Dictionary<int, Order>();
         StreamReader orderFileReader = new StreamReader(@"..\..\OrderBestand.txt");
 
-        public void ConstructOrderMatrix()
+        public void SetUpOrderMatrix()
         {
             int orderMatrixIndex = 0;
 
@@ -164,6 +175,11 @@ namespace Grote_Opdracht
 
                 orderMatrixRead = orderFileReader.ReadLine();
             }
+        }
+
+        public Dictionary<int, Order> GetOrderMatrix()
+        {
+            return orderMatrix;
         }
     }
 }
