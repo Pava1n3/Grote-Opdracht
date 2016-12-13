@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.SolverFoundation;
-using Microsoft.SolverFoundation.Common;
-using Microsoft.SolverFoundation.Services;
 using System.IO;
 
 namespace Grote_Opdracht
@@ -43,13 +40,41 @@ namespace Grote_Opdracht
 
             StreamWriter sw = new StreamWriter("Solution.txt");
         }
+
+        public void GetNeighbours(Solution solution)
+        {
+            /*Given a solution, it could iterate over the schedule contained within and generate as many neighbours as possible
+             * For each job, create a solution without that job
+             * For each job, try to add another route before this job (insert a new job without removing the current one)
+             * For each job, switch it with each other job
+             * Holy fuck this is going to be a lot of neighbours
+             * 
+             * How do we change when we list a ride to the depot?
+             * 
+             * We could keep a small list of ten jobs, five with the highest score and five random ones and choose from that list (thats not truly random I geuss)
+             */
+
+
+        }
+
+        public void SimulatedAnnealing()
+        {
+            //we could feed this thing the neighbours we found and choose the next thing here
+        }
+
+        public void FindBaseSolution()
+        {
+            Solution baseSolution = new Solution();
+
+
+        }
     }
 
 
     public class Solution    //describes a solution for the trash collection
     {
         public int cost = 0;
-        public List<List<Job>> schedule = new List<List<Job>>();
+        public List<List<Job>> schedule = new List<List<Job>>();    //Lists of Jobs, which is from depot to depot 
 
         public Solution()
         {
@@ -63,16 +88,76 @@ namespace Grote_Opdracht
                 {
                     cost += orderMatrix.GetOrderMatrix()[job.ordernr].totalEmptyingTime;   //Add the total emptying time
                     cost += distanceMatrix.GetDistanceMatrix()[orderMatrix.GetOrderMatrix()[job.previousJob.ordernr].matrixId, orderMatrix.GetOrderMatrix()[job.ordernr].matrixId];           //Add the traveling time
+
                 }
+            }
+
+            foreach (KeyValuePair<int, Order> orderTuple in orderMatrix.GetOrderMatrix())
+            {
+                bool contains = false;
+
+                foreach (List<Job> jobList in schedule)
+                {
+                   foreach (Job job in jobList)
+                   {
+                       if (job.ordernr == orderTuple.Key)
+                           contains = true; ;
+                   }
+                }
+
+                if (!contains)
+                    cost += orderTuple.Value.totalEmptyingTime * 3;
             }
 
             return cost;
         }
 
+        public void AddJob()
+        {
+
+        }
+
+        public void RemoveJob()
+        { }
+
+        public void SwapJobs()
+        { }
+
         public int Cost
         {
             get{ return cost; }
         }
+
+        public List<List<Job>> GetSchedule()
+        {
+            return schedule;
+        }
+
+        //IsFeasible method?
+        public Boolean IsFeasible(OrderMatrix orderMatrix, DistanceMatrix distanceMatrix)
+        {
+            int load = 0;
+
+            foreach (List<Job> jobList in schedule)
+            {
+                foreach (Job job in jobList)
+                {
+                    if (orderMatrix.GetOrderMatrix()[job.ordernr].matrixId == 0)
+                        load = 0;
+                    else
+                    {
+                        load += orderMatrix.GetOrderMatrix()[job.ordernr].volumeOfOneContainer * orderMatrix.GetOrderMatrix()[job.ordernr].numberOfContainers;
+
+                        if (load > 100000)
+                            return false;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        //Truckload checker?
     }
 
     public class Job             //An order (or job as I've decided to call it) as given in the Orderbestand.txt
@@ -151,7 +236,7 @@ namespace Grote_Opdracht
 
         public void SetUpOrderMatrix()
         {
-            int orderMatrixIndex = 0;
+            int orderMatrixIndex;
 
             orderFileReader.ReadLine();     //The first read is here because the first line is "MatrixID1;MatrixID2;Afstand;Rijtijd" and we don't need that line, by doing this we skip over it
             string orderMatrixRead = orderFileReader.ReadLine();    //We read a line from the text file
