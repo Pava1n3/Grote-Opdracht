@@ -70,7 +70,7 @@ namespace Grote_Opdracht
         }
     }
 
-
+    /*
     public class Solution    //describes a solution for the trash collection
     {
         public int cost = 0;
@@ -191,9 +191,11 @@ namespace Grote_Opdracht
             xCoördinate = XCoördinate;
             yCoördinate = YCoördinate;
             */
+    /*
         }
 
     }
+
 
     public class DistanceMatrix
     {
@@ -267,4 +269,5 @@ namespace Grote_Opdracht
             return orderMatrix;
         }
     }
+    */
 }
