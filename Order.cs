@@ -8,7 +8,9 @@ namespace Grote_Opdracht
 {
     public class Order
     {
-        public int frequency, numberOfContainers, volumeOfOneContainer, totalEmptyingTime, orderId, xCoördinate, yCoördinate, matrixId;
+        public int frequency, numberOfContainers, volumeOfOneContainer, orderId, xCoördinate, yCoördinate, matrixId;
+        public double totalEmptyingTime;
+
         public bool done;
 
         public Order()

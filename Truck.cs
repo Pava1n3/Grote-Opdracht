@@ -11,7 +11,7 @@ namespace Grote_Opdracht
         // Constants
         private const int MINLOAD = 240/5;
         private const int HALFFIVE = 41400;
-        private const int DEPOT = 0;
+        private const int DEPOTORDERID = 0;
         private const int DEPOTMATRIXID = 287;
         private const int MAXLOAD = 20000;
         private const int DUMPLOAD = 1800;
@@ -35,9 +35,12 @@ namespace Grote_Opdracht
         /// </summary>
         private int truckID;
         /// <summary>
-        /// Integers that reflect the truck his status.
+        /// Double that holds the current time of day.
         /// </summary>
-        int currentTime = 0;
+        double currentTime = 0;
+        /// <summary>
+        /// Integer that holds the current truckload.
+        /// </summary>
         int currentLoad = 0;
 
         /// <summary>
@@ -58,9 +61,9 @@ namespace Grote_Opdracht
         /// <summary>
         /// Class that creates the workingday for the truck.
         /// </summary>
-        public void CreateDay()
+        public void CreateDay(int dayNumber)
         {
-            Day day = new Day();
+            Day day = new Day(dayNumber);
 
             while (!dayCompleted)
             {
@@ -69,6 +72,7 @@ namespace Grote_Opdracht
 
             week.AddDay(day);
             dayCompleted = false;
+            currentTime = 0;
         }
 
         /// <summary>
@@ -102,7 +106,7 @@ namespace Grote_Opdracht
             int orderID = CheckNextOrder();
 
             // If the next destination is the Depot...
-            if (orderID == DEPOT)
+            if (orderID == DEPOTORDERID)
             {
                 // If the currentposition and the next destination are both the depot...
                 if (currentPosition == DEPOTMATRIXID)
@@ -115,7 +119,7 @@ namespace Grote_Opdracht
                 else
                 {
                     // Drive to the depot...
-                    currentTime += distanceMatrix.CheckDistance(currentPosition, orderID);
+                    currentTime += distanceMatrix.CheckDistance(currentPosition, DEPOTMATRIXID);
                     // Dump the current load and update the values.
                     currentTime += DUMPLOAD;
                     currentLoad = 0;
@@ -161,7 +165,7 @@ namespace Grote_Opdracht
                 if (possibility == -1 || MAXLOAD - currentLoad < MINLOAD)
                 {
                     // set the next destination to the Depot.
-                    orderID = DEPOT;
+                    orderID = DEPOTORDERID;
                     break;
                 }
                 // Else check if the possibilty is viable, when it is...
@@ -190,7 +194,7 @@ namespace Grote_Opdracht
             foreach (KeyValuePair<int, Order> order in orderMatrix.orderMatrix)
             {
                 // If an orderID is present in the list of rejects, skip that order.
-                if (rejects.Contains(order.Key))
+                if (rejects.Contains(order.Key) || order.Value.frequency > 1)
                     continue;
 
                 // Check the distance.
@@ -205,26 +209,6 @@ namespace Grote_Opdracht
             }
 
             return orderID;
-            //// Iterates through the distance matrix to check if which order is nearest.
-            //for (int x = 0; x < distanceMatrix.GetDistanceMatrix.GetLength(1); x++)
-            //{
-
-            //    // Iterate over the rejected destinations and the depot.
-            //    if (rejects.Contains(x) || x == DEPOT)
-            //        continue;
-
-            //    int distance = distanceMatrix.CheckDistance(currentPosition, x);
-
-            //    // If the order is still present in the list and the distance is smaller than the previous one...
-            //    if (orderMatrix.FindOrderID(x) != -1 && distance <= minDistance)
-            //    {
-            //        // Set the new values.
-            //        minDistance = Math.Min(minDistance, distance);
-            //        matrixID = x;
-            //    }
-            //}
-
-            //return matrixID;
         }
 
         /// <summary>
@@ -251,9 +235,9 @@ namespace Grote_Opdracht
         private bool CheckTime(int orderID)
         {
             // Add the Travelingtime to the Destination, Emptyingtime and Travelingtime back to Depot.
-            int totalTime = distanceMatrix.CheckDistance(currentPosition, orderMatrix.GetMatrixID(orderID)) + 
-                            orderMatrix.TotalEmptyingTime(orderID) + 
-                            distanceMatrix.CheckDistance(orderMatrix.GetMatrixID(orderID), DEPOTMATRIXID);
+            double totalTime = distanceMatrix.CheckDistance(currentPosition, orderMatrix.GetMatrixID(orderID)) + 
+                               orderMatrix.TotalEmptyingTime(orderID) + 
+                               distanceMatrix.CheckDistance(orderMatrix.GetMatrixID(orderID), DEPOTMATRIXID);
 
             // Check if it breaks the limit.
             return currentTime + totalTime <= HALFFIVE;

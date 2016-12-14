@@ -21,9 +21,9 @@ namespace Grote_Opdracht
         private int dayNumber;
 
 
-        public Day()
+        public Day(int dayNumber)
         {
-            dayNumber = 1;
+            this.dayNumber = dayNumber;
             day = new List<Route>();
         }
 
@@ -40,16 +40,15 @@ namespace Grote_Opdracht
             get { return dayNumber; }
         }
 
-        public void PrintOutput()
+        public void PrintOutput(StreamWriter sw)
         {
             int sequence = 1;
 
             foreach (Route route in day)
             {
-                route.PrintOutput(this, sequence);
+                route.PrintOutput(this, sw, sequence);
 
                 sequence += route.Length();
-                sequence++;
             }
         }
     }

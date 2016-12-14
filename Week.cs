@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Grote_Opdracht
 {
@@ -20,11 +21,11 @@ namespace Grote_Opdracht
             week.Add(day);
         }
 
-        public void PrintOutput()
+        public void PrintOutput(StreamWriter sw)
         {
             foreach (Day day in week)
             {
-                day.PrintOutput();
+                day.PrintOutput(sw);
             }
         }
     }

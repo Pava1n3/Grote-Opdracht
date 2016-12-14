@@ -40,7 +40,7 @@ namespace Grote_Opdracht
                 orderMatrix[orderMatrixIndex].frequency = Convert.ToInt16(orderMatrixLine[2][0].ToString());                             // frequency. This line is different because frequence is noted as 'XPWK'. We extract the first character (the number X denoting frequency) and convert it to an int. *you can treat strings as arrays in C# hence the [0] gets the first character
                 orderMatrix[orderMatrixIndex].numberOfContainers = Convert.ToInt16(orderMatrixLine[3]);                                  // number of containers
                 orderMatrix[orderMatrixIndex].volumeOfOneContainer = Convert.ToInt16(orderMatrixLine[4]);                                // volume of one container
-                orderMatrix[orderMatrixIndex].totalEmptyingTime = (int)(Convert.ToDouble(orderMatrixLine[5].Replace('.', ',')) * 60);    // Hold on for a second, the total emptying time is in minutes. So we convert it to seconds
+                orderMatrix[orderMatrixIndex].totalEmptyingTime = (Convert.ToDouble(orderMatrixLine[5].Replace('.', ',')) * 60);    // Hold on for a second, the total emptying time is in minutes. So we convert it to seconds
                 orderMatrix[orderMatrixIndex].matrixId = Convert.ToInt16(orderMatrixLine[6]);                                            // MatrixId
                 orderMatrix[orderMatrixIndex].xCoördinate = Convert.ToInt32(orderMatrixLine[7]);                                         // X Coördinate of the order location
                 orderMatrix[orderMatrixIndex].yCoördinate = Convert.ToInt32(orderMatrixLine[8]);                                         // Y Coördinate of the order location
@@ -83,7 +83,7 @@ namespace Grote_Opdracht
         /// </summary>
         /// <param name="orderID">OrderID that you want to request the emptying time from.</param>
         /// <returns></returns>
-        public int TotalEmptyingTime(int orderID)
+        public double TotalEmptyingTime(int orderID)
         {
             return orderMatrix[orderID].totalEmptyingTime;
         }

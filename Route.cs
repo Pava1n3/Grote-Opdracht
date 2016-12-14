@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Grote_Opdracht
 {
@@ -13,13 +14,13 @@ namespace Grote_Opdracht
     {
         // Constants
         private const int HALFFIVE = 41400;
-        private const int DEPOT = 0;
+        private const int DEPOTORDERID = 0;
         private const int DEPOTMATRIXID = 287;
         private const int MAXLOAD = 20000;
         private const int DUMPLOAD = 1800;
         // Objects
         private DistanceMatrix distanceMatrix;
-        private List<Order> route;
+        private LinkedList<Order> route;
         // Variables
         /// <summary>
         /// Holds the IDnumber of the truck that will process this route.
@@ -35,7 +36,7 @@ namespace Grote_Opdracht
         {
             this.distanceMatrix = distanceMatrix;
             this.truckID = truckID;
-            route = new List<Order>();
+            route = new LinkedList<Order>();
         }
 
         /// <summary>
@@ -43,7 +44,7 @@ namespace Grote_Opdracht
         /// </summary>
         public void AddDestination(Order destination)
         {
-            route.Add(destination);
+            route.AddLast(destination);
         }
 
         /// <summary>
@@ -51,17 +52,20 @@ namespace Grote_Opdracht
         /// </summary>
         public bool CheckRoute()
         {
+            // Check if the load/time limit gets broken.
             return (TotalTime() <= HALFFIVE && TotalLoad() <= MAXLOAD);
         }
 
         /// <summary>
         /// Returns the total time it takes to process this Route.
         /// </summary>
-        public int TotalTime()
+        public double TotalTime()
         {
-            int totalTime = 0;
+            // Set initial time to 0 and initial location to Depot.
+            double totalTime = 0;
             int location = DEPOTMATRIXID;
 
+            // Foreach order in the route, add the time it takes to process it.
             foreach (Order order in route)
             {
                 totalTime += distanceMatrix.CheckDistance(location, order.matrixId) + order.totalEmptyingTime;
@@ -69,8 +73,10 @@ namespace Grote_Opdracht
                 location = order.matrixId;
             }
 
+            // Finally return to the depot and empty the truckload.
             totalTime += distanceMatrix.CheckDistance(location, DEPOTMATRIXID) + DUMPLOAD;
 
+            // Return the value.
             return totalTime;
         }
 
@@ -79,8 +85,10 @@ namespace Grote_Opdracht
         /// </summary>
         public int TotalLoad()
         {
+            // Set initial load to 0.
             int totalLoad = 0;
 
+            // 
             foreach (Order order in route)
             {
                 totalLoad += order.numberOfContainers * order.volumeOfOneContainer / 5;
@@ -92,15 +100,19 @@ namespace Grote_Opdracht
         /// <summary>
         /// Prints the route to the console in the specified format.
         /// </summary>
-        public void PrintOutput(Day day, int sequence)
+        public void PrintOutput(Day day, StreamWriter sw, int sequence)
         {
             foreach (Order order in route)
             {
+                sw.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, order.orderId);
                 Console.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, order.orderId);
+
                 sequence++;
             }
 
-            Console.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, DEPOT);
+            sw.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, DEPOTORDERID);
+            Console.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, DEPOTORDERID);
+
         }
 
         /// <summary>
