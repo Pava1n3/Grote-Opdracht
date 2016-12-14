@@ -1,3 +1,0 @@
-Vehicle; Day; Sequence number; Order 
-1 ; 2 ; 1 ; 121
-1 ; 2 ; 2 ; 0
