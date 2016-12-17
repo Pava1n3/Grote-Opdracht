@@ -88,7 +88,7 @@ namespace Grote_Opdracht
             // Set initial load to 0.
             int totalLoad = 0;
 
-            // 
+            // Add the load of each order to the total load for this route.
             foreach (Order order in route)
             {
                 totalLoad += order.numberOfContainers * order.volumeOfOneContainer / 5;
@@ -101,17 +101,19 @@ namespace Grote_Opdracht
         /// Prints the route to the console in the specified format.
         /// </summary>
         public void PrintOutput(Day day, StreamWriter sw, int sequence)
-        {
+        {       
+            // For each order...
             foreach (Order order in route)
             {
-                sw.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, order.orderId);
+                // Print a line in the format: trucknumber; daynumber; sequence number; orderID
                 Console.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, order.orderId);
-
+                sw.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, order.orderId);
+                // Increment the sequence after each print.
                 sequence++;
             }
-
-            sw.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, DEPOTORDERID);
+            // And end the route with a trip back to the depot.
             Console.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, DEPOTORDERID);
+            sw.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, DEPOTORDERID);
 
         }
 
@@ -121,6 +123,7 @@ namespace Grote_Opdracht
         /// <returns></returns>
         public int Length()
         {
+            // Returns the length, the plus one is because of the trip back to the depot that isn't specified in the routeList.
             return route.Count() + 1;
         }
     }

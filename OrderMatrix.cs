@@ -12,7 +12,7 @@ namespace Grote_Opdracht
         /// <summary>
         /// Dictionary that holds all the Data for each destination.
         /// </summary>
-        public Dictionary<int, Order> orderMatrix = new Dictionary<int, Order>();
+        private Dictionary<int, Order> orderMatrix = new Dictionary<int, Order>();
         /// <summary>
         /// Streamreader for OrderBestand.txt.
         /// </summary>
@@ -40,10 +40,13 @@ namespace Grote_Opdracht
                 orderMatrix[orderMatrixIndex].frequency = Convert.ToInt16(orderMatrixLine[2][0].ToString());                             // frequency. This line is different because frequence is noted as 'XPWK'. We extract the first character (the number X denoting frequency) and convert it to an int. *you can treat strings as arrays in C# hence the [0] gets the first character
                 orderMatrix[orderMatrixIndex].numberOfContainers = Convert.ToInt16(orderMatrixLine[3]);                                  // number of containers
                 orderMatrix[orderMatrixIndex].volumeOfOneContainer = Convert.ToInt16(orderMatrixLine[4]);                                // volume of one container
-                orderMatrix[orderMatrixIndex].totalEmptyingTime = (Convert.ToDouble(orderMatrixLine[5].Replace('.', ',')) * 60);    // Hold on for a second, the total emptying time is in minutes. So we convert it to seconds
+                orderMatrix[orderMatrixIndex].totalEmptyingTime = (Convert.ToDouble(orderMatrixLine[5].Replace('.', ',')) * 60);         // Hold on for a second, the total emptying time is in minutes. So we convert it to seconds
                 orderMatrix[orderMatrixIndex].matrixId = Convert.ToInt16(orderMatrixLine[6]);                                            // MatrixId
                 orderMatrix[orderMatrixIndex].xCoördinate = Convert.ToInt32(orderMatrixLine[7]);                                         // X Coördinate of the order location
                 orderMatrix[orderMatrixIndex].yCoördinate = Convert.ToInt32(orderMatrixLine[8]);                                         // Y Coördinate of the order location
+
+                // Set counter.
+                orderMatrix[orderMatrixIndex].counter = orderMatrix[orderMatrixIndex].frequency;
 
                 // And continue reading the inputfile.
                 orderMatrixRead = orderFileReader.ReadLine();
@@ -54,18 +57,23 @@ namespace Grote_Opdracht
         /// Returns the OrderMatrix.
         /// </summary>
         /// <returns></returns>
-        public Dictionary<int, Order> GetOrderMatrix()
+        public Dictionary<int, Order> GetOrderMatrix
         {
-            return orderMatrix;
+            get { return orderMatrix; }
         }
 
         /// <summary>
-        /// Removes a specific matrixID from the OrderMatrix.
+        /// Completes a specific orderID from the OrderMatrix.
         /// </summary>
-        /// <param name="orderID">OrderID that you want to remove.</param>
+        /// <param name="orderID">OrderID that you want to complete.</param>
         public void CompleteOrder(int orderID)
         {
-            orderMatrix.Remove(orderID);
+            //
+            orderMatrix[orderID].counter--;
+            orderMatrix[orderID].processed = true;
+
+            if (orderMatrix[orderID].counter == 0)
+                orderMatrix.Remove(orderID);
         }
 
         /// <summary>
@@ -96,6 +104,16 @@ namespace Grote_Opdracht
         public int GetMatrixID(int orderID)
         {
             return orderMatrix[orderID].matrixId;
+        }
+
+        /// <summary>
+        /// Returns the frequency of the given order.
+        /// </summary>
+        /// <param name="orderID">The orderID from which you want to frequency.</param>
+        /// <returns></returns>
+        public int GetFrequency(int orderID)
+        {
+            return orderMatrix[orderID].frequency;
         }
 
         /// <summary>
