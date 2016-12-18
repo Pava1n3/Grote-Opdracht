@@ -21,6 +21,17 @@ namespace Grote_Opdracht
             week.Add(day);
         }
 
+        public void PrintCosts()
+        {
+            foreach (Day day in week)
+                day.PrintCosts();
+        }
+
+        public List<Day> GetWeek
+        {
+            get { return week; }
+        }
+
         public void PrintOutput(StreamWriter sw)
         {
             foreach (Day day in week)

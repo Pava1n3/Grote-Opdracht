@@ -26,8 +26,11 @@ namespace Grote_Opdracht
             }
 
             StreamWriter sw = new StreamWriter(@"..\..\Solution.txt");
+            weekSchedule.PrintCosts();
             weekSchedule.PrintOutput(sw);
             sw.Flush();
+
+            Console.ReadKey();
         }
     }
 }

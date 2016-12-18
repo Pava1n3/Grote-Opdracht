@@ -64,11 +64,15 @@ namespace Grote_Opdracht
         public void CreateDay(int dayNumber)
         {
             // Start a new day...
-            Day day = new Day(dayNumber);
+            Day day = new Day(dayNumber, truckID);
+            int routeIDcounter = 1;
 
             // While the day hasn't ended, keep creating routes.
             while (!dayCompleted)
-                CreateRoute(day);
+            {
+                CreateRoute(day, routeIDcounter);
+                routeIDcounter++;
+            }
 
             // When the day is over, add the day to the week.
             week.AddDay(day);
@@ -80,10 +84,10 @@ namespace Grote_Opdracht
         /// <summary>
         /// Class that creates a single route for the truck.
         /// </summary>
-        public void CreateRoute(Day day)
+        public void CreateRoute(Day day, int routeID)
         {
             // Create a new route
-            Route route = new Route(distanceMatrix, truckID);
+            Route route = new Route(distanceMatrix, routeID, currentTime);
 
             // While the route isn't complete...
             while (!routeCompleted)

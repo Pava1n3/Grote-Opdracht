@@ -47,7 +47,9 @@ namespace Grote_Opdracht
 
                 // Set counter.
                 orderMatrix[orderMatrixIndex].counter = orderMatrix[orderMatrixIndex].frequency;
-
+                // Forced Boolean.
+                if (orderMatrix[orderMatrixIndex].frequency > 1)
+                    orderMatrix[orderMatrixIndex].processed = true;
                 // And continue reading the inputfile.
                 orderMatrixRead = orderFileReader.ReadLine();
             }
@@ -68,10 +70,12 @@ namespace Grote_Opdracht
         /// <param name="orderID">OrderID that you want to complete.</param>
         public void CompleteOrder(int orderID)
         {
-            //
+            // If an order is completed, decrement the counter by one.
+            // This is a method to check orders with a frequency > 1.
             orderMatrix[orderID].counter--;
             orderMatrix[orderID].processed = true;
 
+            // When the counter has reached 0, remove it from the matrix.
             if (orderMatrix[orderID].counter == 0)
                 orderMatrix.Remove(orderID);
         }

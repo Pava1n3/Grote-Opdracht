@@ -35,9 +35,6 @@ namespace Grote_Opdracht
                 distanceMatrix[Convert.ToInt32(distanceMatrixLine[0]), Convert.ToInt32(distanceMatrixLine[1])] = Convert.ToInt16(distanceMatrixLine[3]);
                 distanceMatrixRead = distanceMatrixReader.ReadLine();
             }
-
-            // Random Sentence
-            Console.WriteLine("We read the whole distance Matrix!");
         }
 
         /// <summary>

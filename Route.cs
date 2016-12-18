@@ -13,7 +13,7 @@ namespace Grote_Opdracht
     public class Route
     {
         // Constants
-        private const int HALFFIVE = 41400;
+        private const int WORKINGDAY = 43200;
         private const int DEPOTORDERID = 0;
         private const int DEPOTMATRIXID = 287;
         private const int MAXLOAD = 20000;
@@ -22,20 +22,19 @@ namespace Grote_Opdracht
         private DistanceMatrix distanceMatrix;
         private LinkedList<Order> route;
         // Variables
-        /// <summary>
-        /// Holds the IDnumber of the truck that will process this route.
-        /// </summary>
-        private int truckID;
+        private int routeID;
+        private double startTime;
 
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="distanceMatrix">Matrix that holds the distances.</param>
         /// <param name="truckID">IDnumber of the truck that will process this route.</param>
-        public Route(DistanceMatrix distanceMatrix, int truckID)
+        public Route(DistanceMatrix distanceMatrix, int routeID, double startTime)
         {
             this.distanceMatrix = distanceMatrix;
-            this.truckID = truckID;
+            this.routeID = routeID;
+            this.startTime = startTime;
             route = new LinkedList<Order>();
         }
 
@@ -53,7 +52,7 @@ namespace Grote_Opdracht
         public bool CheckRoute()
         {
             // Check if the load/time limit gets broken.
-            return (TotalTime() <= HALFFIVE && TotalLoad() <= MAXLOAD);
+            return (startTime + TotalTime() <= WORKINGDAY && TotalLoad() <= MAXLOAD);
         }
 
         /// <summary>
@@ -106,15 +105,37 @@ namespace Grote_Opdracht
             foreach (Order order in route)
             {
                 // Print a line in the format: trucknumber; daynumber; sequence number; orderID
-                Console.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, order.orderId);
-                sw.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, order.orderId);
+                sw.WriteLine("{0}; {1}; {2}; {3}", day.TruckID, day.DayNumber, sequence, order.orderId);
                 // Increment the sequence after each print.
                 sequence++;
             }
             // And end the route with a trip back to the depot.
-            Console.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, DEPOTORDERID);
-            sw.WriteLine("{0}; {1}; {2}; {3}", truckID, day.DayNumber, sequence, DEPOTORDERID);
+            sw.WriteLine("{0}; {1}; {2}; {3}", day.TruckID, day.DayNumber, sequence, DEPOTORDERID);
 
+        }
+
+        /// <summary>
+        /// Returns the list of Orders.
+        /// </summary>
+        public LinkedList<Order> GetRoute
+        {
+            get { return route; }
+        }
+
+        /// <summary>
+        /// Returns the routeID for this route.
+        /// </summary>
+        public int RouteID
+        {
+            get { return routeID; }
+        }
+
+        /// <summary>
+        /// Returns the startingtime for this route.
+        /// </summary>
+        public double StartTime
+        {
+            get { return startTime; }
         }
 
         /// <summary>
