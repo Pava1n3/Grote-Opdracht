@@ -98,6 +98,9 @@ namespace Grote_Opdracht
             Console.WriteLine("---------------------------------------------------");
         }
 
+        /// <summary>
+        /// Updates the routedata for this day.
+        /// </summary>
         public void UpdateRoutes()
         {
             double time = 0;
