@@ -49,10 +49,15 @@ namespace Grote_Opdracht
         /// <summary>
         /// Checks whether a route is still feasible.
         /// </summary>
-        public bool CheckRoute()
+        public bool CheckRoute(double totalTime = 0, int totalLoad = 0)
         {
+            if (totalTime == 0)
+                totalTime = TotalTime();
+            if (totalLoad == 0)
+                totalLoad = TotalLoad();
+
             // Check if the load/time limit gets broken.
-            return (startTime + TotalTime() <= WORKINGDAY && TotalLoad() <= MAXLOAD);
+            return (startTime + totalTime <= WORKINGDAY && totalLoad <= MAXLOAD);
         }
 
         /// <summary>

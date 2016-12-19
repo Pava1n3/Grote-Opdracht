@@ -15,6 +15,7 @@ namespace Grote_Opdracht
         private const int HALFFIVE = 41400;
         private const int DEPOTMATRIXID = 287;
         private const int DUMPLOAD = 1800;
+        private const int MAXLOAD = 20000;
 
         // Objects
         Week week;
@@ -26,6 +27,7 @@ namespace Grote_Opdracht
         {
             this.week = week;
             this.orderMatrix = orderMatrix;
+            this.distanceMatrix = distanceMatrix;
         }
 
         /// <summary>
@@ -91,60 +93,78 @@ namespace Grote_Opdracht
             Order order = orderMatrix.GetOrderMatrix.Last().Value;
             orderMatrix.GetOrderMatrix.Remove(order.orderId);
 
+            List<Tuple<int, int, int, double>> possibleSpots = new List<Tuple<int, int, int, double>>();    //weekIndex, routeID, index in the route, gains
+
             bool spotFound = false;
-            int weekIndex = 0, weekCounter = 0; //index keeps track of which day we are at, counter helps exiting the while if we have checked the whole week
+            int weekIndex = 0, weekCounter = 0, newLoad, spotCounter = 0; //index keeps track of which day we are at, counter helps exiting the while if we have checked the whole week
             double totalTime, newTime = 0, dayTime;
-            double chance = 80; //acceptance chance
+            double chance = 70; //acceptance chance
 
-            for (int x = 0; x < 5; x++)
+            weekIndex = random.Next(week.GetWeek.Count);
+
+            while (weekCounter < week.GetWeek.Count)
             {
-                weekIndex = random.Next(week.GetWeek.Count);
+                Day day = week.GetWeek[weekIndex];
+                dayTime = day.DayTotalTime();
 
+                //if a spot was possible at some point, accept it now
+                //or make a list of all spots and choose at the end (cleaner)
 
-                while (!spotFound)
+                foreach(Route route in day.GetRoutes)
                 {
-                    Day day = week.GetWeek[weekIndex];
-                    dayTime = day.DayTotalTime();
+                    totalTime = route.TotalTime();
 
-                    foreach(Route route in day.GetRoutes)
+                    for (int y = 0; y < route.GetRoute.Count; y++)
                     {
-                        totalTime = route.TotalTime();
-
-                        for (int y = 0; y < route.GetRoute.Count; y++)
+                        if (y == route.GetRoute.Count - 1)
                         {
-                            if (y == route.GetRoute.Count)
-                            {
-                                //Calculate the new travel time for this route
-                                newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, DEPOTMATRIXID] //distance from current route to depot
-                                    + distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, order.matrixId]  //distance form curr to new order
-                                    + distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID]   //new order to depot
-                                    + order.totalEmptyingTime;  //order emptying time
-                                    //depot emptying time is already in totalTime
-                            }
-                            else
-                            {
-                                //Calculate the new travel time for this route
-                                newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, route.GetRoute[y + 1].matrixId]
-                                    + distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, order.matrixId]
-                                    + distanceMatrix.GetDistanceMatrix[order.matrixId, route.GetRoute[y + 1].matrixId]
-                                    + order.totalEmptyingTime;
-                            }
+                            //Calculate the new travel time for this route
+                            newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, DEPOTMATRIXID] //distance from current route to depot
+                                + distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, order.matrixId]  //distance form curr to new order
+                                + distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID]   //new order to depot
+                                + order.totalEmptyingTime;  //order emptying time
+                                //depot emptying time is already in totalTime
+                        }
+                        else
+                        {
+                            //Calculate the new travel time for this route
+                            newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, route.GetRoute[y + 1].matrixId]
+                                + distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, order.matrixId]
+                                + distanceMatrix.GetDistanceMatrix[order.matrixId, route.GetRoute[y + 1].matrixId]
+                                + order.totalEmptyingTime;
+                        }
 
-                            if (dayTime - totalTime + newTime <= HALFFIVE)
-                            {
-                                //consider this spot
-                            }
+                        //The new load, now includes the new order
+                        newLoad = route.TotalLoad() + order.volumeOfOneContainer * order.numberOfContainers / 5;
+
+                        if (route.CheckRoute(newTime, newLoad))
+                        {
+                            possibleSpots.Add(new Tuple<int, int, int, double>(weekIndex, route.RouteID, y, totalTime - newTime));
                         }
                     }
-
-                    //So we don't go out of bounds
-                    weekIndex++;
-                    weekCounter++;
-                    if (weekIndex >= week.GetWeek.Count)
-                        weekIndex = 0;
-                    if (weekCounter >= week.GetWeek.Count)
-                        break;
                 }
+
+                //So we don't go out of bounds
+                weekIndex++;
+                weekCounter++;
+                if (weekIndex >= week.GetWeek.Count)
+                    weekIndex = 0;
+            }
+
+            //go over the possible spots
+            while (!spotFound && spotCounter < 3)
+            {
+                foreach (Tuple<int, int, int, double> spot in possibleSpots)
+                {
+                    if (chance + spot.Item4 / 100 > random.Next(101))
+                    {
+                        week.GetWeek[spot.Item1].GetRoutes[spot.Item2 - 1].GetRoute.Insert(spot.Item3, order);
+                        spotFound = true;
+                        break;
+                    }
+                }
+
+                spotCounter++;
             }
         }
 
