@@ -98,6 +98,9 @@ namespace Grote_Opdracht
             Console.WriteLine("---------------------------------------------------");
         }
 
+        /// <summary>
+        /// Returns the list of Routes.
+        /// </summary>
         public List<Route> GetRoutes
         {
             get { return routes; }

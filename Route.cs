@@ -20,7 +20,7 @@ namespace Grote_Opdracht
         private const int DUMPLOAD = 1800;
         // Objects
         private DistanceMatrix distanceMatrix;
-        private LinkedList<Order> route;
+        private List<Order> route;
         // Variables
         private int routeID;
         private double startTime;
@@ -35,7 +35,7 @@ namespace Grote_Opdracht
             this.distanceMatrix = distanceMatrix;
             this.routeID = routeID;
             this.startTime = startTime;
-            route = new LinkedList<Order>();
+            route = new List<Order>();
         }
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace Grote_Opdracht
         /// </summary>
         public void AddDestination(Order destination)
         {
-            route.AddLast(destination);
+            route.Add(destination);
         }
 
         /// <summary>
@@ -115,9 +115,18 @@ namespace Grote_Opdracht
         }
 
         /// <summary>
+        /// Removes an order on the given index.
+        /// </summary>
+        /// <param name="index"></param>
+        public void Remove(int index)
+        {
+            route.RemoveAt(index);
+        }
+
+        /// <summary>
         /// Returns the list of Orders.
         /// </summary>
-        public LinkedList<Order> GetRoute
+        public List<Order> GetRoute
         {
             get { return route; }
         }

@@ -16,6 +16,7 @@ namespace Grote_Opdracht
             DistanceMatrix dM = new DistanceMatrix();
 
             Week weekSchedule = new Week();
+            LocalSearch LS = new LocalSearch(weekSchedule, oM);
             Truck Alpha = new Truck(oM, dM, weekSchedule, 1);
             Truck Beta = new Truck(oM, dM, weekSchedule, 2);
 
@@ -24,6 +25,14 @@ namespace Grote_Opdracht
                 Alpha.CreateDay(x);
                 Beta.CreateDay(x);
             }
+
+            for (int x = 0; x < 1000000; x++)
+            {
+                LS.SwapLocalOrders();
+            }
+
+
+
 
             StreamWriter sw = new StreamWriter(@"..\..\Solution.txt");
             weekSchedule.PrintCosts();
