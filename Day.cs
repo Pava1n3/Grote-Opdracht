@@ -64,6 +64,18 @@ namespace Grote_Opdracht
 
             return feasible;
         }
+
+        public double DayTotalTime()
+        {
+            double time = 0;
+
+            foreach(Route route in routes)
+            {
+                time += route.TotalTime();
+            }
+
+            return time;
+        }
         
         /// <summary>
         /// Returns the truckID of the truck that will process this day.

@@ -8,12 +8,21 @@ namespace Grote_Opdracht
 {
     class LocalSearch
     {
+        //TECHNICALLY, DO WE NEED TO CHECK IF WE CAN CREATE A NEW ROUTE OR DELETE AN EMPTY ONE? IT'S RATHER UNLIKELY A ROUTE WILL BECOME COMPLETELY EMPTY THO AND IT WILL BE FILLED UP EVENTUALLY
+        //ALSO, RUNNING MORE THAN TWO ROUTES IS RISKY AT BEST. THE TRIP FROM THE LASTPOINT OF ONE ROUTE TO THE FIRST OF A NEW ONE NEEDS TO EXCEED 30MINS PLUS THE DRIVE TIMES TO AND FROM THE DEPOT
+
+        //Constants
+        private const int HALFFIVE = 41400;
+        private const int DEPOTMATRIXID = 287;
+        private const int DUMPLOAD = 1800;
+
         // Objects
         Week week;
         OrderMatrix orderMatrix;
+        DistanceMatrix distanceMatrix;
         Random random = new Random();
 
-        public LocalSearch(Week week, OrderMatrix orderMatrix)
+        public LocalSearch(Week week, OrderMatrix orderMatrix, DistanceMatrix distanceMatrix)
         {
             this.week = week;
             this.orderMatrix = orderMatrix;
@@ -67,11 +76,59 @@ namespace Grote_Opdracht
             Order order = orderMatrix.GetOrderMatrix.Last().Value;
             orderMatrix.GetOrderMatrix.Remove(order.orderId);
 
+            bool spotFound = false;
+            int weekIndex = 0, weekCounter = 0; //index keeps track of which day we are at, counter helps exiting the while if we have checked the whole week
+            double totalTime, newTime = 0, dayTime;
+            double chance = 80; //acceptance chance
+
             for (int x = 0; x < 5; x++)
             {
-                while (true)
-                {
+                weekIndex = random.Next(week.GetWeek.Count);
 
+
+                while (!spotFound)
+                {
+                    Day day = week.GetWeek[weekIndex];
+                    dayTime = day.DayTotalTime();
+
+                    foreach(Route route in day.GetRoutes)
+                    {
+                        totalTime = route.TotalTime();
+
+                        for (int y = 0; y < route.GetRoute.Count; y++)
+                        {
+                            if (y == route.GetRoute.Count)
+                            {
+                                //Calculate the new travel time for this route
+                                newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, DEPOTMATRIXID] //distance from current route to depot
+                                    + distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, order.matrixId]  //distance form curr to new order
+                                    + distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID]   //new order to depot
+                                    + order.totalEmptyingTime;  //order emptying time
+                                    //depot emptying time is already in totalTime
+                            }
+                            else
+                            {
+                                //Calculate the new travel time for this route
+                                newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, route.GetRoute[y + 1].matrixId]
+                                    + distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, order.matrixId]
+                                    + distanceMatrix.GetDistanceMatrix[order.matrixId, route.GetRoute[y + 1].matrixId]
+                                    + order.totalEmptyingTime;
+                            }
+
+                            if (dayTime - totalTime + newTime <= HALFFIVE)
+                            {
+                                //consider this spot
+                            }
+                        }
+                    }
+
+                    //So we don't go out of bounds
+                    weekIndex++;
+                    weekCounter++;
+                    if (weekIndex >= week.GetWeek.Count)
+                        weekIndex = 0;
+                    if (weekCounter >= week.GetWeek.Count)
+                        break;
                 }
             }
         }
