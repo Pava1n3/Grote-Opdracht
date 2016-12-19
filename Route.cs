@@ -145,6 +145,7 @@ namespace Grote_Opdracht
         public double StartTime
         {
             get { return startTime; }
+            set { startTime = value; }
         }
 
         /// <summary>

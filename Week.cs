@@ -27,6 +27,12 @@ namespace Grote_Opdracht
                 day.PrintCosts();
         }
 
+        public void UpdateDays()
+        {
+            foreach (Day day in week)
+                day.UpdateRoutes();
+        }
+
         public List<Day> GetWeek
         {
             get { return week; }

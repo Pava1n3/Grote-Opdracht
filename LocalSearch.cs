@@ -89,11 +89,13 @@ namespace Grote_Opdracht
             Order temp = route.GetRoute[orderN];
             route.GetRoute[orderN] = route.GetRoute[orderN + 1];
             route.GetRoute[orderN + 1] = temp;
+            week.GetWeek[tuple.Item1].UpdateRoutes();
 
             if (!(route.CheckRoute() && route.TotalTime() <= totalTime))
             {
                 route.GetRoute[orderN + 1] = route.GetRoute[orderN];
                 route.GetRoute[orderN] = temp;
+                week.GetWeek[tuple.Item1].UpdateRoutes();
             }
         }
 
