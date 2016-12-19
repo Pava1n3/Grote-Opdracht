@@ -111,6 +111,20 @@ namespace Grote_Opdracht
         }
 
         /// <summary>
+        /// Updates the routedata for this day.
+        /// </summary>
+        public void UpdateRoutes()
+        {
+            double time = 0;
+
+            foreach(Route route in routes)
+            {
+                route.StartTime = time;
+                time = route.TotalTime();
+            }
+        }
+
+        /// <summary>
         /// Returns the list of Routes.
         /// </summary>
         public List<Route> GetRoutes
