@@ -65,18 +65,27 @@ namespace Grote_Opdracht
             return feasible;
         }
 
-        public double DayTotalTime()
+        public bool CheckNewRoutes(int routeIndex, double newRouteTime)
         {
+            bool check = false;
             double time = 0;
 
-            foreach(Route route in routes)
+            for (int x = 0; x < routes.Count; x++)
             {
-                time += route.TotalTime();
+                if (x == routeIndex - 1)
+                {
+                    time += newRouteTime;
+                }
+                else
+                    time += routes[x].TotalTime();
             }
 
-            return time;
+            if (time <= WORKINGDAY)
+                check = true;
+
+            return check;
         }
-        
+      
         /// <summary>
         /// Returns the truckID of the truck that will process this day.
         /// </summary>

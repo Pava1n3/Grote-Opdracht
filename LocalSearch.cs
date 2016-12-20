@@ -8,8 +8,14 @@ namespace Grote_Opdracht
 {
     class LocalSearch
     {
-        //TECHNICALLY, DO WE NEED TO CHECK IF WE CAN CREATE A NEW ROUTE OR DELETE AN EMPTY ONE? IT'S RATHER UNLIKELY A ROUTE WILL BECOME COMPLETELY EMPTY THO AND IT WILL BE FILLED UP EVENTUALLY
+        //TECHNICALLY, DO WE NEED TO CHECK IF WE CAN CREATE A NEW ROUTE OR DELETE AN EMPTY ONE? IT'S RATHER UNLIKELY A ROUTE WILL BECOME COMPLETELY EMPTY AND IT WILL BE FILLED UP EVENTUALLY
         //ALSO, RUNNING MORE THAN TWO ROUTES IS RISKY AT BEST. THE TRIP FROM THE LASTPOINT OF ONE ROUTE TO THE FIRST OF A NEW ONE NEEDS TO EXCEED 30MINS PLUS THE DRIVE TIMES TO AND FROM THE DEPOT
+
+        /* Add a random order, at a fairly random position (AddOrder)
+         * Delete a random order (DeleteOrder)
+         * Swap two random orders
+         * Put an order in a different time of the route/day (SwapLocalOrders)
+         */
 
         //Constants
         private const int HALFFIVE = 41400;
@@ -33,32 +39,36 @@ namespace Grote_Opdracht
         /// <summary>
         ///  Delete an order from the list and add it to the orderMatrix.
         /// </summary>
-        public void DeleteOrder()
+        public bool DeleteOrder()
         {
             // Needed objects/variables.
             double maxGain = int.MaxValue;
-            int tempOrderN = 0;
+            int tempOrderN = 0, orderN = -1;
             Tuple<int, int> tempTuple = null;
             Order temp = null;
+            double timeGain = 0;
+            Order order = null;
+            Route route = null;
+            bool deletionDone = false;
 
             // Check for possible deletions.
             for (int x = 0; x < 5; x++)
             {
                 // Pick a random order from a random route.
                 Tuple<int, int> tuple = SelectRandomRoute();
-                Route route = week.GetWeek[tuple.Item1].GetRoutes[tuple.Item2];
-                int orderN = random.Next(route.GetRoute.Count());
+                route = week.GetWeek[tuple.Item1].GetRoutes[tuple.Item2];
+                orderN = random.Next(route.GetRoute.Count());
                 // Check the totalTime if takes to complete the route with that order.
                 double totalTime = route.TotalTime();
 
                 // If the order has a frequency higher than 1, continue;
-                Order order = route.GetRoute[orderN];
-                if (order.frequency > 1)
+                if (route.GetRoute[orderN].frequency > 1)
                     continue;
+                order = route.GetRoute[orderN];
                 // Remove the order...
                 route.Remove(orderN);
                 // and check the time you gain with this deletion.
-                double timeGain = totalTime - route.TotalTime();
+                timeGain = totalTime - route.TotalTime();
 
                 // If the gain is bigger than previous gains...
                 if (timeGain <= maxGain)
@@ -83,31 +93,137 @@ namespace Grote_Opdracht
                     // Revert the changes you made.
                     route.GetRoute.Insert(orderN, order);                
             }
-            // Update the new routedata and add the removed order to the orderMatrix.
-            week.GetWeek[tempTuple.Item1].UpdateRoutes();
-            orderMatrix.GetOrderMatrix.Add(temp.orderId, temp);
+
+            //Run a test to see if the new change will pass
+            if (order != null)
+            {
+                if (timeGain > 3 * order.totalEmptyingTime * order.frequency) //unlikely, but if the route was really bad it might be an improvement not to do it
+                {
+                    deletionDone = true;
+                    // Update the new routedata and add the removed order to the orderMatrix.
+                    week.GetWeek[tempTuple.Item1].UpdateRoutes();
+                    orderMatrix.GetOrderMatrix.Add(temp.orderId, temp);
+                }
+                else if(75 + timeGain / 100 > random.Next(101))//only accept it with a certain chance
+                {
+                    deletionDone = true;
+                    // Update the new routedata and add the removed order to the orderMatrix.
+                    week.GetWeek[tempTuple.Item1].UpdateRoutes();
+                    orderMatrix.GetOrderMatrix.Add(temp.orderId, temp);
+                }
+                else //revert the last delete, we have not succeeded
+                {
+                    orderN = Math.Min(route.GetRoute.Count, orderN);    //while this might seem weird, I had a crash where orderN was 100 while the route had 92 entries (how)
+
+                    route.GetRoute.Insert(orderN, order);
+                }
+            }
+
+            return deletionDone;
+        }
+
+        /// <summary>
+        /// Difference here is that we stay in the same route
+        /// </summary>
+        /// <returns></returns>
+        public bool Deletion()
+        {
+            bool deletionDone = false;
+            int routeIndex = 0, routeCount, currentBest = -1;
+            double timeGain = double.MaxValue, totalTime, newTime;
+
+            Tuple<int, int> randomRoute = SelectRandomRoute();
+            Route route = week.GetWeek[randomRoute.Item1].GetRoutes[randomRoute.Item2];
+            Order order = null, bestOrder = null;
+            totalTime = route.TotalTime();
+            routeCount = route.GetRoute.Count;
+
+            for (int x = 0; x < 5; x++)
+            {
+                if (routeCount == 0)
+                  return false;
+
+                routeIndex = random.Next(routeCount);
+                order = route.GetRoute[routeIndex];
+                if (order.frequency > 1)
+                    continue;
+
+                if(routeCount == 1)
+                {
+                    newTime = totalTime;
+                }
+                else if(routeIndex == 0)
+                {
+                    newTime = totalTime - distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, order.matrixId]
+                                        - order.totalEmptyingTime
+                                        + distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, route.GetRoute[routeIndex + 1].matrixId];
+                }
+                else if(routeIndex == routeCount - 1)
+                {
+                    newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[routeIndex - 1].matrixId, order.matrixId]
+                                        - distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID]
+                                        - order.totalEmptyingTime
+                                        + distanceMatrix.GetDistanceMatrix[route.GetRoute[routeIndex - 1].matrixId, DEPOTMATRIXID];
+                }
+                else
+                {
+                    newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[routeIndex - 1].matrixId, order.matrixId]
+                                        - distanceMatrix.GetDistanceMatrix[order.matrixId, route.GetRoute[routeIndex + 1].matrixId]
+                                        - order.totalEmptyingTime
+                                        + distanceMatrix.GetDistanceMatrix[route.GetRoute[routeIndex - 1].matrixId, route.GetRoute[routeIndex + 1].matrixId];
+                }
+
+                if (totalTime - newTime < timeGain)
+                {
+                    timeGain = totalTime - newTime;
+                    currentBest = routeIndex;
+                    bestOrder = order;
+                }
+            }
+
+            if (currentBest != -1)
+            {
+                if (timeGain >= 3 * order.totalEmptyingTime * order.frequency)
+                {
+                    route.Remove(currentBest);
+                    week.GetWeek[randomRoute.Item1].UpdateRoutes();
+                    orderMatrix.GetOrderMatrix.Add(bestOrder.orderId, bestOrder);
+                    deletionDone = true;
+                }
+                else if (101 > random.Next(101))
+                {
+                    route.Remove(currentBest);
+                    week.GetWeek[randomRoute.Item1].UpdateRoutes();
+                    orderMatrix.GetOrderMatrix.Add(bestOrder.orderId, bestOrder);
+                    deletionDone = true;
+                }
+            }
+
+            return deletionDone;
         }
 
         /// <summary>
         /// Add an order from the orderMatrix to the schedule *currently the last one present in the orderMatrix
         /// </summary>
-        public void AddOrder()
+        public bool AddOrder()
         {
+            if (orderMatrix.GetOrderMatrix.Count == 0)
+                return false;
             Order order = orderMatrix.GetOrderMatrix.Last().Value;
             
-            List<Tuple<int, int, int, double>> possibleSpots = new List<Tuple<int, int, int, double>>();    //weekIndex, routeID, index in the route, gains
+            List<Tuple<int, int, int, double>> possibleSpots = new List<Tuple<int, int, int, double>>();    //weekIndex, routeID, index in the route, the extra time this route takes
 
             bool spotFound = false;
-            int weekIndex = 0, weekCounter = 0, newLoad, spotCounter = 0; //index keeps track of which day we are at, counter helps exiting the while if we have checked the whole week
-            double totalTime, newTime = 0, dayTime;
-            double chance = 70; //acceptance chance
+            int weekIndex = 0, weekCounter = 0, newLoad, spotCounter = 0, maximumAttempts; //index keeps track of which day we are at, counter helps exiting the while if we have checked the whole week
+            //Doubles for the current time of a route, the new time of a route
+            double totalTime = 0, newTime = 0;
+            double chance = 30; //acceptance chance
 
             weekIndex = random.Next(week.GetWeek.Count);
 
             while (weekCounter < week.GetWeek.Count)
             {
                 Day day = week.GetWeek[weekIndex];
-                dayTime = day.DayTotalTime();
 
                 //if a spot was possible at some point, accept it now
                 //or make a list of all spots and choose at the end (cleaner)
@@ -116,34 +232,49 @@ namespace Grote_Opdracht
                 {
                     totalTime = route.TotalTime();
 
-                    for (int y = 0; y < route.GetRoute.Count; y++)
+                    for (int y = 0; y <= route.GetRoute.Count; y++)
                     {
-                        //If we're at the last entry, the next stop is the depot and we need to do things in a slightly different way
-                        if (y == route.GetRoute.Count - 1)
+                        if (y == 0)
+                        {
+                            newTime = totalTime - distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, route.GetRoute[y].matrixId]
+                                //- distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, route.GetRoute[y + 1].matrixId]
+                                                + distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, order.matrixId]
+                                                + distanceMatrix.GetDistanceMatrix[order.matrixId, route.GetRoute[y].matrixId]
+                                                + order.totalEmptyingTime;
+                        }
+                        else if (y == route.GetRoute.Count) //If we're at the last entry, the next stop is the depot and we need to do things in a slightly different way
                         {
                             //Calculate the new travel time for this route
-                            newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, DEPOTMATRIXID] //distance from current route to depot
-                                + distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, order.matrixId]  //distance form curr to new order
+                            newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y - 1].matrixId, DEPOTMATRIXID] //distance from current route to depot
+                                + distanceMatrix.GetDistanceMatrix[route.GetRoute[y - 1].matrixId, order.matrixId]  //distance form curr to new order
                                 + distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID]   //new order to depot
                                 + order.totalEmptyingTime;  //order emptying time
+                            //- 1800
                                 //depot emptying time is already in totalTime
                         }
                         else
                         {
                             //Calculate the new travel time for this route
-                            newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, route.GetRoute[y + 1].matrixId]
-                                + distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, order.matrixId]
-                                + distanceMatrix.GetDistanceMatrix[order.matrixId, route.GetRoute[y + 1].matrixId]
+                            newTime = totalTime - distanceMatrix.GetDistanceMatrix[route.GetRoute[y - 1].matrixId, route.GetRoute[y].matrixId]
+                                + distanceMatrix.GetDistanceMatrix[route.GetRoute[y - 1].matrixId, order.matrixId]
+                                + distanceMatrix.GetDistanceMatrix[order.matrixId, route.GetRoute[y].matrixId]
                                 + order.totalEmptyingTime;
                         }
 
                         //The new load, now includes the new order
                         newLoad = route.TotalLoad() + order.volumeOfOneContainer * order.numberOfContainers / 5;
 
+                        //insert into route
+                        //updateroutes
+                        //check
+                        //remove from route
+
+                        //add difference in time to relevant starttimes
+
                         //Check if the new route is feasible
-                        if (route.CheckRoute(newTime, newLoad))
+                        if (newLoad < MAXLOAD && day.CheckNewRoutes(route.RouteID, newTime))
                         {
-                            possibleSpots.Add(new Tuple<int, int, int, double>(weekIndex, route.RouteID, y, totalTime - newTime));
+                            possibleSpots.Add(new Tuple<int, int, int, double>(weekIndex, route.RouteID, y, newTime - totalTime));
                         }
                     }
                 }
@@ -155,22 +286,142 @@ namespace Grote_Opdracht
                     weekIndex = 0;
             }
 
-            //go over the possible spots and try adding the order with a chance based on the time change
-            while (!spotFound && spotCounter < 3)
+            if (possibleSpots.Count == 0)
+                return false;
+
+            maximumAttempts = Math.Max(1, possibleSpots.Count / 5);
+
+            while(!spotFound && spotCounter < maximumAttempts)
             {
-                foreach (Tuple<int, int, int, double> spot in possibleSpots)
+                //Pick a random thingy from the possible spots
+                int index = random.Next(possibleSpots.Count);
+
+                Tuple<int, int, int, double> spot = possibleSpots[index];
+
+                //If it's an improvement
+                if(spot.Item4 <= 3 * orderMatrix.GetOrderMatrix[order.orderId].totalEmptyingTime * orderMatrix.GetOrderMatrix[order.orderId].frequency)
                 {
-                    if (chance + spot.Item4 / 100 > random.Next(101))
-                    {
-                        week.GetWeek[spot.Item1].GetRoutes[spot.Item2 - 1].GetRoute.Insert(spot.Item3, order);
-                        orderMatrix.GetOrderMatrix.Remove(order.orderId);
-                        spotFound = true;
-                        break;
-                    }
+                    week.GetWeek[spot.Item1].GetRoutes[spot.Item2 - 1].GetRoute.Insert(spot.Item3, order);
+                    week.GetWeek[spot.Item1].UpdateRoutes();
+                    orderMatrix.GetOrderMatrix.Remove(order.orderId);
+                    spotFound = true;
+                }
+                else if (chance + spot.Item4 / 100 > random.Next(101))//Spot can still be accepted because we are annealing simulations
+                {
+                    week.GetWeek[spot.Item1].GetRoutes[spot.Item2 - 1].GetRoute.Insert(spot.Item3, order);
+                    week.GetWeek[spot.Item1].UpdateRoutes();
+                    orderMatrix.GetOrderMatrix.Remove(order.orderId);
+                    spotFound = true;
                 }
 
                 spotCounter++;
             }
+
+            return spotFound;
+        }
+
+        public bool SwapOrder()
+        {
+            bool swapComplete = false;
+            List<Tuple<int, double>> PossibleIndexes = new List<Tuple<int, double>>();
+            double aTotalTime, bTotalTime, aNewTime, bNewTime, aGains, bGains, totalGains;
+            int aLoad, bLoad, aIndex;
+
+            //Choose a random day + route
+            Tuple<int, int> initialD = SelectRandomRoute(); //Have we been in this place before?
+            Day dayA = week.GetWeek[initialD.Item1];
+            Route routeA = dayA.GetRoutes[initialD.Item2];
+
+            //Choose a random order on that route
+            aIndex = random.Next(1, routeA.GetRoute.Count - 1);
+            Order orderA = routeA.GetRoute[aIndex];
+
+            //Pick another random dayroute
+            Tuple<int, int> targetDay = SelectRandomRoute();
+            Day dayB = week.GetWeek[targetDay.Item1];
+            Route routeB = dayB.GetRoutes[targetDay.Item2];
+
+            //Get the current times
+            aTotalTime = routeA.TotalTime();
+            bTotalTime = routeB.TotalTime();
+
+            //Gather all possible (one-for-one) swaps
+            for (int x = 1; x < routeB.GetRoute.Count - 1; x++ )
+            {
+                //Get the new time with a swapped for b
+                aNewTime = aTotalTime - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeA.GetRoute[aIndex].matrixId] //route from a - 1 to a
+                                      - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex].matrixId, routeA.GetRoute[aIndex + 1].matrixId] //route from a to a + 1
+                                      - orderA.totalEmptyingTime                                                                                  //a's emptying time
+                                      + distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeB.GetRoute[x].matrixId]      //route from a - 1 to b
+                                      + distanceMatrix.GetDistanceMatrix[routeB.GetRoute[x].matrixId, routeA.GetRoute[aIndex + 1].matrixId]      //route from a + 1 to b
+                                      + routeB.GetRoute[x].totalEmptyingTime;                                                                    //b's emptying time
+
+                bNewTime = GetNewTime(bTotalTime, routeB, orderA, x);
+
+                //Calculate how much time is gained
+                aGains = aNewTime - aTotalTime;
+                bGains = bNewTime - bTotalTime;
+                totalGains = aGains + bGains;
+
+                //If, the time and load with b for a checks out, and the time and load with a for b checks out
+                aLoad = routeA.TotalLoad() - orderA.volumeOfOneContainer * orderA.numberOfContainers / 5;
+                bLoad = routeB.TotalLoad() - routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5;
+
+                if (aLoad < MAXLOAD && bLoad < MAXLOAD && dayA.CheckNewRoutes(routeA.RouteID, aNewTime) && dayB.CheckNewRoutes(routeB.RouteID, bNewTime))
+                {
+                    PossibleIndexes.Add(new Tuple<int, double>(x, totalGains));
+                }
+            }
+
+            //Akin to addorder, go over them
+            int swapCounter = 0, MaximumAttempts = Math.Max(1, PossibleIndexes.Count / 5);
+            int randomIndex;
+
+            while(!swapComplete && swapCounter < MaximumAttempts)
+            {
+                randomIndex = random.Next(PossibleIndexes.Count);
+                Tuple<int, double> possibility = PossibleIndexes[randomIndex];
+                Order orderB = routeB.GetRoute[possibility.Item1];
+
+                if(possibility.Item2 < 3 * orderB.totalEmptyingTime * orderB.frequency + 3 * orderA.totalEmptyingTime * orderA.frequency)
+                {
+                    //remove a, insert b, clean up
+                    routeA.Remove(aIndex);
+                    routeA.GetRoute.Insert(aIndex, orderB);
+                    dayA.UpdateRoutes();
+
+                    //Remove b, insert a, clean up
+                    routeB.Remove(possibility.Item1);
+                    routeB.GetRoute.Insert(possibility.Item1, orderA);
+                    dayB.UpdateRoutes();
+
+                    swapComplete = true;
+                }
+            }
+
+            return swapComplete;
+        }
+
+        /// <summary>
+        /// Recalculates a route's time given would-be-new parameters
+        /// </summary>
+        /// <param name="currentTime">Current TotalTime of Route a</param>
+        /// <param name="a">Route where Order b will be inserted</param>
+        /// <param name="b">Order that will be inserted into a</param>
+        /// <param name="aIndex">Position at which b will be inserted</param>
+        /// <returns>The new time should b be inserted</returns>
+        public double GetNewTime(double currentTime, Route a, Order b, int aIndex)
+        {
+            double newTime = 0;
+
+            newTime = currentTime - distanceMatrix.GetDistanceMatrix[a.GetRoute[aIndex - 1].matrixId, a.GetRoute[aIndex].matrixId] //route from a - 1 to a
+                                      - distanceMatrix.GetDistanceMatrix[a.GetRoute[aIndex].matrixId, a.GetRoute[aIndex + 1].matrixId] //route from a to a + 1
+                                      - a.GetRoute[aIndex].totalEmptyingTime                                                                                  //a's emptying time
+                                      + distanceMatrix.GetDistanceMatrix[a.GetRoute[aIndex - 1].matrixId, b.matrixId]      //route from a - 1 to b
+                                      + distanceMatrix.GetDistanceMatrix[b.matrixId, a.GetRoute[aIndex + 1].matrixId]      //route from a + 1 to b
+                                      + b.totalEmptyingTime;                       
+
+            return newTime;
         }
 
         /// <summary>

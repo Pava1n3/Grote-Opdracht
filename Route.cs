@@ -78,7 +78,8 @@ namespace Grote_Opdracht
             }
 
             // Finally return to the depot and empty the truckload.
-            totalTime += distanceMatrix.CheckDistance(location, DEPOTMATRIXID) + DUMPLOAD;
+            if(route.Count > 0)
+                totalTime += distanceMatrix.CheckDistance(location, DEPOTMATRIXID) + DUMPLOAD;
 
             // Return the value.
             return totalTime;
@@ -115,7 +116,8 @@ namespace Grote_Opdracht
                 sequence++;
             }
             // And end the route with a trip back to the depot.
-            sw.WriteLine("{0}; {1}; {2}; {3}", day.TruckID, day.DayNumber, sequence, DEPOTORDERID);
+            if(route.Count > 0)
+                sw.WriteLine("{0}; {1}; {2}; {3}", day.TruckID, day.DayNumber, sequence, DEPOTORDERID);
 
         }
 

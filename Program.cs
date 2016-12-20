@@ -26,14 +26,35 @@ namespace Grote_Opdracht
                 Beta.CreateDay(x);
             }
 
-            //for (int x = 0; x < 1000000; x++)
-            //{
-            //    LS.SwapLocalOrders();
-            //}
+            //Do Local Search
+            Random random = new Random();
+            int randomOperationChoice = -1;
+            bool operationPerformed = false;
 
-            LS.DeleteOrder();
-            LS.AddOrder();
+            for (int x = 0; x < 1000; x++)
+            {
+                while (!operationPerformed)
+                {
+                    randomOperationChoice = random.Next(3);
 
+                    switch (randomOperationChoice)
+                    {
+                        case 0:
+                            operationPerformed = LS.AddOrder();
+                            break;
+                        case 1:
+                            operationPerformed = LS.Deletion();
+                            break;
+                        case 2:
+                            operationPerformed = LS.AddOrder();
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                operationPerformed = false;
+            }
 
             StreamWriter sw = new StreamWriter(@"..\..\Solution.txt");
             weekSchedule.PrintCosts();
