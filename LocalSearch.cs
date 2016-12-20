@@ -88,11 +88,13 @@ namespace Grote_Opdracht
             orderMatrix.GetOrderMatrix.Add(temp.orderId, temp);
         }
 
+        /// <summary>
+        /// Add an order from the orderMatrix to the schedule *currently the last one present in the orderMatrix
+        /// </summary>
         public void AddOrder()
         {
             Order order = orderMatrix.GetOrderMatrix.Last().Value;
-            orderMatrix.GetOrderMatrix.Remove(order.orderId);
-
+            
             List<Tuple<int, int, int, double>> possibleSpots = new List<Tuple<int, int, int, double>>();    //weekIndex, routeID, index in the route, gains
 
             bool spotFound = false;
@@ -116,6 +118,7 @@ namespace Grote_Opdracht
 
                     for (int y = 0; y < route.GetRoute.Count; y++)
                     {
+                        //If we're at the last entry, the next stop is the depot and we need to do things in a slightly different way
                         if (y == route.GetRoute.Count - 1)
                         {
                             //Calculate the new travel time for this route
@@ -137,6 +140,7 @@ namespace Grote_Opdracht
                         //The new load, now includes the new order
                         newLoad = route.TotalLoad() + order.volumeOfOneContainer * order.numberOfContainers / 5;
 
+                        //Check if the new route is feasible
                         if (route.CheckRoute(newTime, newLoad))
                         {
                             possibleSpots.Add(new Tuple<int, int, int, double>(weekIndex, route.RouteID, y, totalTime - newTime));
@@ -144,14 +148,14 @@ namespace Grote_Opdracht
                     }
                 }
 
-                //So we don't go out of bounds
+                //So we don't go out of the week's bounds
                 weekIndex++;
                 weekCounter++;
                 if (weekIndex >= week.GetWeek.Count)
                     weekIndex = 0;
             }
 
-            //go over the possible spots
+            //go over the possible spots and try adding the order with a chance based on the time change
             while (!spotFound && spotCounter < 3)
             {
                 foreach (Tuple<int, int, int, double> spot in possibleSpots)
@@ -159,6 +163,7 @@ namespace Grote_Opdracht
                     if (chance + spot.Item4 / 100 > random.Next(101))
                     {
                         week.GetWeek[spot.Item1].GetRoutes[spot.Item2 - 1].GetRoute.Insert(spot.Item3, order);
+                        orderMatrix.GetOrderMatrix.Remove(order.orderId);
                         spotFound = true;
                         break;
                     }
