@@ -133,7 +133,7 @@ namespace Grote_Opdracht
         {
             bool deletionDone = false;
             int routeIndex = 0, routeCount, currentBest = -1;
-            double timeGain = double.MaxValue, totalTime, newTime;
+            double timeGain = double.MinValue, totalTime, newTime;
 
             Tuple<int, int> randomRoute = SelectRandomRoute();
             Route route = week.GetWeek[randomRoute.Item1].GetRoutes[randomRoute.Item2];
@@ -176,7 +176,7 @@ namespace Grote_Opdracht
                                         + distanceMatrix.GetDistanceMatrix[route.GetRoute[routeIndex - 1].matrixId, route.GetRoute[routeIndex + 1].matrixId];
                 }
 
-                if (totalTime - newTime < timeGain)
+                if (totalTime - newTime > timeGain)
                 {
                     timeGain = totalTime - newTime;
                     currentBest = routeIndex;
@@ -186,14 +186,14 @@ namespace Grote_Opdracht
 
             if (currentBest != -1)
             {
-                if (timeGain >= 3 * order.totalEmptyingTime * order.frequency)
+                if (timeGain > 3 * order.totalEmptyingTime * order.frequency)
                 {
                     route.Remove(currentBest);
                     week.GetWeek[randomRoute.Item1].UpdateRoutes();
                     orderMatrix.GetOrderMatrix.Add(bestOrder.orderId, bestOrder);
                     deletionDone = true;
                 }
-                else if (101 > random.Next(101))
+                else if (10 + Math.Min(80, timeGain / 3) > random.Next(101))
                 {
                     route.Remove(currentBest);
                     week.GetWeek[randomRoute.Item1].UpdateRoutes();
@@ -212,7 +212,11 @@ namespace Grote_Opdracht
         {
             if (orderMatrix.GetOrderMatrix.Count == 0)
                 return false;
-            Order order = orderMatrix.GetOrderMatrix.Last().Value;
+
+            int[] keys = orderMatrix.GetOrderMatrix.Keys.ToArray();
+            int key = keys[random.Next(keys.Length)];
+
+            Order order = orderMatrix.GetOrderMatrix[key];
             
             List<Tuple<int, int, int, double>> possibleSpots = new List<Tuple<int, int, int, double>>();    //weekIndex, routeID, index in the route, the extra time this route takes
 
@@ -220,13 +224,36 @@ namespace Grote_Opdracht
             int weekIndex = 0, weekCounter = 0, newLoad, spotCounter = 0, maximumAttempts; //index keeps track of which day we are at, counter helps exiting the while if we have checked the whole week
             //Doubles for the current time of a route, the new time of a route
             double totalTime = 0, newTime = 0;
-            double chance = 30; //acceptance chance
 
             weekIndex = random.Next(week.GetWeek.Count);
 
             while (weekCounter < week.GetWeek.Count)
             {
                 Day day = week.GetWeek[weekIndex];
+
+                double time = 0;
+                foreach (Route route in day.GetRoutes)
+                    time += route.TotalTime();
+
+                if(time - 43100 < random.Next(100))    //If there's not likely going to be room in this day, skip checking it altogether
+                {
+                    //So we don't go out of the week's bounds
+                    weekIndex++;
+                    weekCounter++;
+                    if (weekIndex >= week.GetWeek.Count)
+                        weekIndex = 0;
+
+                    continue;
+                }
+
+                if(day.GetRoutes.Count == 1 && day.GetRoutes[0].TotalLoad() > 19800)
+                {
+                    day.AddRoute(new Route(distanceMatrix, 2, day.GetRoutes[0].TotalTime()));
+                }
+                else if(day.GetRoutes.Count == 0)
+                {
+                    day.AddRoute(new Route(distanceMatrix, 1, 0));
+                }
 
                 //if a spot was possible at some point, accept it now
                 //or make a list of all spots and choose at the end (cleaner)
@@ -292,14 +319,14 @@ namespace Grote_Opdracht
             if (possibleSpots.Count == 0)
                 return false;
 
-            maximumAttempts = Math.Max(1, possibleSpots.Count / 5);
+            maximumAttempts = Math.Max(1, possibleSpots.Count / 4);
 
             while(!spotFound && spotCounter < maximumAttempts)
             {
                 //Pick a random thingy from the possible spots
                 int index = random.Next(possibleSpots.Count);
 
-                Tuple<int, int, int, double> spot = possibleSpots[index];
+                Tuple<int, int, int, double> spot = possibleSpots[index];   //week, route, index, gains
 
                 //If it's an improvement
                 if(spot.Item4 <= 3 * orderMatrix.GetOrderMatrix[order.orderId].totalEmptyingTime * orderMatrix.GetOrderMatrix[order.orderId].frequency)
@@ -309,7 +336,7 @@ namespace Grote_Opdracht
                     orderMatrix.GetOrderMatrix.Remove(order.orderId);
                     spotFound = true;
                 }
-                else if (chance + spot.Item4 / 100 > random.Next(101))//Spot can still be accepted because we are annealing simulations
+                else if (10 + spot.Item4 / 6 < random.Next(101))//Spot can still be accepted because we are annealing simulations
                 {
                     week.GetWeek[spot.Item1].GetRoutes[spot.Item2 - 1].GetRoute.Insert(spot.Item3, order);
                     week.GetWeek[spot.Item1].UpdateRoutes();
@@ -421,25 +448,25 @@ namespace Grote_Opdracht
                     //Console.WriteLine("RouteID of b {0} ; Daynumber {1}; StartTime {2}; Total time {3}, Check {4} ", routeB.RouteID, targetDay.Item1, routeB.StartTime, routeB.TotalTime(), dayB.CheckDay());
                     //Console.WriteLine("================================");
                 }
-                //else if(30 > random.Next(101))
-                //{
-                //    //remove a, insert b, clean up
-                //    routeA.Remove(aIndex);
-                //    routeA.GetRoute.Insert(aIndex, orderB);
-                //    dayA.UpdateRoutes();
+                else if (16 > random.Next(101))
+                {
+                    //remove a, insert b, clean up
+                    routeA.Remove(aIndex);
+                    routeA.GetRoute.Insert(aIndex, orderB);
+                    dayA.UpdateRoutes();
 
-                //    //Remove b, insert a, clean up
-                //    routeB.Remove(possibility.Item1);
-                //    routeB.GetRoute.Insert(possibility.Item1, orderA);
-                //    dayB.UpdateRoutes();
+                    //Remove b, insert a, clean up
+                    routeB.Remove(possibility.Item1);
+                    routeB.GetRoute.Insert(possibility.Item1, orderA);
+                    dayB.UpdateRoutes();
 
-                //    swapComplete = true;
+                    swapComplete = true;
 
-                //    Console.WriteLine("SWAPPED: =======================");
-                //    Console.WriteLine("RouteID of a {0} ; Newtime {1}, StartTime {2}, Day time {3}, Check {4} {5}", routeA.RouteID, aNewTime, routeA.StartTime, routeA.TotalTime(), dayA.CheckDay(), dayA.CheckNewRoutes(routeA.RouteID, routeA.TotalTime()));
-                //    Console.WriteLine("RouteID of b {0} ; Newtime {1}, StartTime {2}, Day time {3}, Check {4} {5}", routeB.RouteID, bNewTime, routeB.StartTime, routeB.TotalTime(), dayB.CheckDay(), dayB.CheckNewRoutes(routeB.RouteID, routeB.TotalTime()));
-                //    Console.WriteLine("================================");
-                //}
+                    //Console.WriteLine("SWAPPED: =======================");
+                    //Console.WriteLine("RouteID of a {0} ; Newtime {1}, StartTime {2}, Day time {3}, Check {4} {5}", routeA.RouteID, aNewTime, routeA.StartTime, routeA.TotalTime(), dayA.CheckDay(), dayA.CheckNewRoutes(routeA.RouteID, routeA.TotalTime()));
+                    //Console.WriteLine("RouteID of b {0} ; Newtime {1}, StartTime {2}, Day time {3}, Check {4} {5}", routeB.RouteID, bNewTime, routeB.StartTime, routeB.TotalTime(), dayB.CheckDay(), dayB.CheckNewRoutes(routeB.RouteID, routeB.TotalTime()));
+                    //Console.WriteLine("================================");
+                }
 
                 swapCounter++;
             }
@@ -474,8 +501,10 @@ namespace Grote_Opdracht
         /// <summary>
         /// Swap orders within a route.
         /// </summary>
-        public void SwapLocalOrders()
+        public bool SwapLocalOrders()
         {
+            bool swapComplete = false;
+
             // Pick a random route...   
             Tuple<int, int> tuple = SelectRandomRoute();
             Route route = week.GetWeek[tuple.Item1].GetRoutes[tuple.Item2];
@@ -483,7 +512,7 @@ namespace Grote_Opdracht
             // And pick a random Order within that route.
             int orderN = random.Next(route.GetRoute.Count());
             if (orderN == route.GetRoute.Count()-1)
-                return;
+                return false;
 
             // Swap that order with the next order in the list.
             Order temp = route.GetRoute[orderN];
@@ -493,7 +522,7 @@ namespace Grote_Opdracht
             week.GetWeek[tuple.Item1].UpdateRoutes();
 
             // Check if there's any gain from swapping...
-            if (!(route.CheckRoute() && route.TotalTime() <= totalTime))
+            if (!(route.CheckRoute() && route.TotalTime() <= totalTime) && random.Next(101) > 95)
             {
                 // If not, revert the changes.
                 route.GetRoute[orderN + 1] = route.GetRoute[orderN];
@@ -501,6 +530,10 @@ namespace Grote_Opdracht
                 // And update the startingtimes again.
                 week.GetWeek[tuple.Item1].UpdateRoutes();
             }
+            else
+                swapComplete = true;
+
+            return swapComplete;
         }
 
         /// <summary>
