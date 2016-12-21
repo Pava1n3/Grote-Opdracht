@@ -70,14 +70,30 @@ namespace Grote_Opdracht
             bool check = false;
             double time = 0;
 
-            for (int x = 0; x < routes.Count; x++)
+            //for (int x = 0; x < routes.Count; x++)
+            //{
+            //    if (x == routeIndex - 1)
+            //    {
+            //        time += newRouteTime;
+            //    }
+            //    else
+            //        time += routes[x].TotalTime();
+            //}
+
+            if(routes.Count > 1)
             {
-                if (x == routeIndex - 1)
+                if(routeIndex == 1)
                 {
-                    time += newRouteTime;
+                    time = newRouteTime + routes[1].TotalTime();
                 }
                 else
-                    time += routes[x].TotalTime();
+                {
+                    time = routes[1].StartTime + newRouteTime;
+                }
+            }
+            else
+            {
+                time = newRouteTime;
             }
 
             if (time <= WORKINGDAY)

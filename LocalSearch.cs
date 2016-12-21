@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,6 +23,8 @@ namespace Grote_Opdracht
         private const int DEPOTMATRIXID = 287;
         private const int DUMPLOAD = 1800;
         private const int MAXLOAD = 20000;
+        private int WORKINGDAY = 43200;
+        enum operation { Add, Swap, Delete };
 
         // Objects
         Week week;
@@ -322,9 +325,11 @@ namespace Grote_Opdracht
 
         public bool SwapOrder()
         {
+            //StreamWriter sw = new StreamWriter(@"...\...\swaps.txt");
+
             bool swapComplete = false;
             List<Tuple<int, double>> PossibleIndexes = new List<Tuple<int, double>>();
-            double aTotalTime, bTotalTime, aNewTime, bNewTime, aGains, bGains, totalGains;
+            double aTotalTime, bTotalTime, aNewTime = 0, bNewTime = 0, aGains, bGains, totalGains;
             int aLoad, bLoad, aIndex;
 
             //Choose a random day + route
@@ -335,8 +340,10 @@ namespace Grote_Opdracht
             //Choose a random order on that route
             aIndex = random.Next(1, routeA.GetRoute.Count - 1);
             Order orderA = routeA.GetRoute[aIndex];
+            if (orderA.frequency > 1)
+                return false;
 
-            //Pick another random dayroute
+            //Pick another random day & route
             Tuple<int, int> targetDay = SelectRandomRoute();
             Day dayB = week.GetWeek[targetDay.Item1];
             Route routeB = dayB.GetRoutes[targetDay.Item2];
@@ -348,6 +355,9 @@ namespace Grote_Opdracht
             //Gather all possible (one-for-one) swaps
             for (int x = 1; x < routeB.GetRoute.Count - 1; x++ )
             {
+                if (routeB.GetRoute[x].frequency > 1)
+                    continue;
+
                 //Get the new time with a swapped for b
                 aNewTime = aTotalTime - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeA.GetRoute[aIndex].matrixId] //route from a - 1 to a
                                       - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex].matrixId, routeA.GetRoute[aIndex + 1].matrixId] //route from a to a + 1
@@ -358,14 +368,17 @@ namespace Grote_Opdracht
 
                 bNewTime = GetNewTime(bTotalTime, routeB, orderA, x);
 
+                if (initialD.Item1 == targetDay.Item1)// && aNewTime + bNewTime > WORKINGDAY)
+                    continue;
+
                 //Calculate how much time is gained
                 aGains = aNewTime - aTotalTime;
                 bGains = bNewTime - bTotalTime;
                 totalGains = aGains + bGains;
 
                 //If, the time and load with b for a checks out, and the time and load with a for b checks out
-                aLoad = routeA.TotalLoad() - orderA.volumeOfOneContainer * orderA.numberOfContainers / 5;
-                bLoad = routeB.TotalLoad() - routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5;
+                aLoad = routeA.TotalLoad() - orderA.volumeOfOneContainer * orderA.numberOfContainers / 5 + routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5;
+                bLoad = routeB.TotalLoad() - routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5 + orderA.numberOfContainers * orderA.volumeOfOneContainer / 5;
 
                 if (aLoad < MAXLOAD && bLoad < MAXLOAD && dayA.CheckNewRoutes(routeA.RouteID, aNewTime) && dayB.CheckNewRoutes(routeB.RouteID, bNewTime))
                 {
@@ -379,11 +392,14 @@ namespace Grote_Opdracht
 
             while(!swapComplete && swapCounter < MaximumAttempts)
             {
+                if (PossibleIndexes.Count == 0)
+                    break;
+
                 randomIndex = random.Next(PossibleIndexes.Count);
                 Tuple<int, double> possibility = PossibleIndexes[randomIndex];
                 Order orderB = routeB.GetRoute[possibility.Item1];
 
-                if(possibility.Item2 < 3 * orderB.totalEmptyingTime * orderB.frequency + 3 * orderA.totalEmptyingTime * orderA.frequency)
+                if(possibility.Item2 <= 0)
                 {
                     //remove a, insert b, clean up
                     routeA.Remove(aIndex);
@@ -396,8 +412,39 @@ namespace Grote_Opdracht
                     dayB.UpdateRoutes();
 
                     swapComplete = true;
+
+                    if(!(dayA.CheckDay() && dayB.CheckDay()))
+                        swapComplete = true;
+
+                    //Console.WriteLine("SWAPPED: =======================");
+                    //Console.WriteLine("RouteID of a {0} ; Daynumber {1}; StartTime {2}; Total time {3}, Check {4} ", routeA.RouteID, initialD.Item1, routeA.StartTime, routeA.TotalTime(), dayA.CheckDay());
+                    //Console.WriteLine("RouteID of b {0} ; Daynumber {1}; StartTime {2}; Total time {3}, Check {4} ", routeB.RouteID, targetDay.Item1, routeB.StartTime, routeB.TotalTime(), dayB.CheckDay());
+                    //Console.WriteLine("================================");
                 }
+                //else if(30 > random.Next(101))
+                //{
+                //    //remove a, insert b, clean up
+                //    routeA.Remove(aIndex);
+                //    routeA.GetRoute.Insert(aIndex, orderB);
+                //    dayA.UpdateRoutes();
+
+                //    //Remove b, insert a, clean up
+                //    routeB.Remove(possibility.Item1);
+                //    routeB.GetRoute.Insert(possibility.Item1, orderA);
+                //    dayB.UpdateRoutes();
+
+                //    swapComplete = true;
+
+                //    Console.WriteLine("SWAPPED: =======================");
+                //    Console.WriteLine("RouteID of a {0} ; Newtime {1}, StartTime {2}, Day time {3}, Check {4} {5}", routeA.RouteID, aNewTime, routeA.StartTime, routeA.TotalTime(), dayA.CheckDay(), dayA.CheckNewRoutes(routeA.RouteID, routeA.TotalTime()));
+                //    Console.WriteLine("RouteID of b {0} ; Newtime {1}, StartTime {2}, Day time {3}, Check {4} {5}", routeB.RouteID, bNewTime, routeB.StartTime, routeB.TotalTime(), dayB.CheckDay(), dayB.CheckNewRoutes(routeB.RouteID, routeB.TotalTime()));
+                //    Console.WriteLine("================================");
+                //}
+
+                swapCounter++;
             }
+
+
 
             return swapComplete;
         }

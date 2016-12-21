@@ -9,6 +9,7 @@ namespace Grote_Opdracht
 {
     class Program
     {
+        enum operation { Add, Swap, Delete };
 
         static void Main(string[] args)
         {
@@ -28,31 +29,23 @@ namespace Grote_Opdracht
 
             //Do Local Search
             Random random = new Random();
-            int randomOperationChoice = -1;
+            int randomOperationChoice = -1, MaximumAttempts = 5, attemptCounter = 0;
             bool operationPerformed = false;
+            List<Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>> neighbours;        //int/enum (swap,ins, del), bool improvement, double score, day, route, index, order, || day2, route2, index2, order2. For high freq orders? LIST
 
-            for (int x = 0; x < 1000; x++)
+            for (int x = 0; x < 300; x++)
             {
-                while (!operationPerformed)
+                while (!operationPerformed && attemptCounter < MaximumAttempts)
                 {
                     randomOperationChoice = random.Next(3);
 
-                    switch (randomOperationChoice)
-                    {
-                        case 0:
-                            operationPerformed = LS.AddOrder();
-                            break;
-                        case 1:
-                            operationPerformed = LS.Deletion();
-                            break;
-                        case 2:
-                            operationPerformed = LS.AddOrder();
-                            break;
-                        default:
-                            break;
-                    }
+                    
+                    operationPerformed = LS.SwapOrder();
+
+                    attemptCounter++;
                 }
 
+                attemptCounter = 0;
                 operationPerformed = false;
             }
 
