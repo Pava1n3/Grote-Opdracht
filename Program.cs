@@ -9,8 +9,6 @@ namespace Grote_Opdracht
 {
     class Program
     {
-        enum operation { Add, Swap, Delete };
-
         static void Main(string[] args)
         {
             OrderMatrix oM = new OrderMatrix();
@@ -31,9 +29,11 @@ namespace Grote_Opdracht
             Random random = new Random();
             int randomOperationChoice = -1, MaximumAttempts = 8, attemptCounter = 0;
             bool operationPerformed = false;
-            //List<Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>> neighbours;        //int/enum (swap,ins, del), bool improvement, double score, day, route, index, order, || day2, route2, index2, order2. For high freq orders? LIST
+            double controlParameter = 6;
+            List<Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>> neighbours = new List<Tuple<operation,bool,double,List<Tuple<int,int,int,Order>>>>();        //int/enum (swap,ins, del), bool improvement, double difference in time, day, route, index, order, || day2, route2, index2, order2. For high freq orders? LIST
+            Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Null, false, 0, null);
 
-            for (int x = 0; x < 30000; x++)
+            for (int x = 0; x < 4000; x++)
             {
                 //Console.WriteLine("============ Attempt: {0} started ===========", x);
 
@@ -42,31 +42,45 @@ namespace Grote_Opdracht
                     randomOperationChoice = random.Next(102);
 
                     //ifs to determine chances
-                    if(randomOperationChoice >= 70 + oM.GetOrderMatrix.Count / 2 && oM.GetOrderMatrix.Count < 50)
-                    {
-                        operationPerformed = LS.Deletion();
-                    }
-                    else if (randomOperationChoice < 40 + oM.GetOrderMatrix.Count && oM.GetOrderMatrix.Count > 0)
-                    {
-                        for (int y = 0; y < 8; y++)
-                            if (!operationPerformed)
-                                operationPerformed = LS.AddOrder();
-                    }
-                    else if(randomOperationChoice > 50)
-                    {
-                        operationPerformed = LS.SwapOrder();
-                    }
-                    else
+                    if(randomOperationChoice > 90)
                     {
                         for (int y = 0; y < 2; y++)
                             if (!operationPerformed)
                                 operationPerformed = LS.SwapLocalOrders();
                     }
+                    else if(randomOperationChoice >= 80 + oM.GetOrderMatrix.Count / 2 && oM.GetOrderMatrix.Count < 30)
+                    {
+                        outcome = LS.Deletion(controlParameter);
+                        if (outcome.Item1 != operation.Null)
+                            neighbours.Add(outcome);
+                        operationPerformed = outcome.Item2;
+                    }
+                    else if (randomOperationChoice < 50 + oM.GetOrderMatrix.Count && oM.GetOrderMatrix.Count > 0)
+                    {
+                        for (int y = 0; y < 8; y++)
+                            if (!operationPerformed)
+                            {
+                                outcome = LS.AddOrder(controlParameter);
+                                if (outcome.Item1 != operation.Null)
+                                    operationPerformed = true;
+                            }
+                    }
+                    else if(randomOperationChoice > 50)
+                    {
+                        outcome = LS.SwapOrder(controlParameter);
+                        if(outcome.Item1 != operation.Null)
+                            operationPerformed = true;
+                    }                    
 
                     attemptCounter++;
                 }
 
+                if (operationPerformed && (outcome.Item2 || Math.Exp(outcome.Item3 / controlParameter) < random.Next(101)))
+                    LS.DoOperation(outcome.Item1, outcome.Item4);
+
                 //Console.WriteLine("Attempt: {0} finished after {1} tries", x, attemptCounter);
+
+                controlParameter *= 0.999;
 
                 attemptCounter = 0;
                 operationPerformed = false;
@@ -79,5 +93,10 @@ namespace Grote_Opdracht
 
             Console.ReadKey();
         }
+
+        //public operation operation
+        //{
+        //    get { return Grote_Opdracht.operation.Add; }
+        //}
     }
 }
