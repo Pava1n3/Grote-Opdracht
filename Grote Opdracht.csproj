@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LocalSearch.cs" />
+    <Compile Include="operation.cs" />
     <Compile Include="Route.cs" />
     <Compile Include="Truck.cs" />
     <Compile Include="DistanceMatrix.cs" />
