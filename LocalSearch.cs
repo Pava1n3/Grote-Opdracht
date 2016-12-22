@@ -44,7 +44,7 @@ namespace Grote_Opdracht
         /// Finds the least costly delete on a random day and a random route
         /// </summary>
         /// <returns></returns>
-        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> Deletion(double controlParameter)
+        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> Deletion()
         {
             //bool deletionDone = false;
             int routeIndex = 0, routeCount, currentBest = -1;
@@ -123,7 +123,7 @@ namespace Grote_Opdracht
         /// <summary>
         /// Add an order from the orderMatrix to the schedule *currently the last one present in the orderMatrix
         /// </summary>
-        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> AddOrder(double controlParameter)
+        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> AddOrder()
         {
             if (orderMatrix.GetOrderMatrix.Count == 0)
                 return emptyTuple;
@@ -265,7 +265,12 @@ namespace Grote_Opdracht
             return outcome;
         }
 
-        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> SwapOrder(double controlParameter)
+        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> HighFrequencySwap()
+        {
+            return emptyTuple;
+        }
+
+        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> SwapOrder()
         {
             //StreamWriter sw = new StreamWriter(@"...\...\swaps.txt");
             Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> outcome = emptyTuple;
@@ -276,15 +281,35 @@ namespace Grote_Opdracht
             int aLoad, bLoad, aIndex;
 
             //Choose a random day + route
-            Tuple<int, int> initialD = SelectRandomRoute(); //Have we been in this place before?
-            Day dayA = week.GetWeek[initialD.Item1];
+            Tuple<int, int> initialD = SelectRandomRoute(); //Have we been in this place before? ~
+            Day dayA = week.GetWeek[initialD.Item1];   
             Route routeA = dayA.GetRoutes[initialD.Item2];
 
             //Choose a random order on that route
             aIndex = random.Next(1, routeA.GetRoute.Count - 1);
             Order orderA = routeA.GetRoute[aIndex];
+
+            //getbit to find out which days
+            //according to frequency, try swapping
             if (orderA.frequency > 1)
+            {
                 return emptyTuple;
+
+                switch (orderA.frequency)
+                {
+                    case 2:
+                        //Pretty tricky, try planning and see if it works!
+                        //Call swaporder for orderA, with dayB the other day this order needs planning
+
+                        break;
+                    case 3:
+                        return emptyTuple; //There's no use trying to swap a frequency 3 order with this method, they can only occur on set days, and this method does not swap on same days
+                        break;
+                    case 4:
+                        //Super flexible, it's feasible as long as you don't plan twice on the same day
+                        break;
+                }
+            }
 
             //Pick another random day & route
             Tuple<int, int> targetDay = SelectRandomRoute();
@@ -355,7 +380,7 @@ namespace Grote_Opdracht
                     //Console.WriteLine("RouteID of b {0} ; Daynumber {1}; StartTime {2}; Total time {3}, Check {4} ", routeB.RouteID, targetDay.Item1, routeB.StartTime, routeB.TotalTime(), dayB.CheckDay());
                     //Console.WriteLine("================================");
                 }
-                else if (16 > random.Next(101))
+                else
                 {
                     //remove a, insert b, clean up
                     routeA.Remove(aIndex);

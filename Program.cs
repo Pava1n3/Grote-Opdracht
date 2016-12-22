@@ -50,24 +50,27 @@ namespace Grote_Opdracht
                     }
                     else if(randomOperationChoice >= 80 + oM.GetOrderMatrix.Count / 2 && oM.GetOrderMatrix.Count < 30)
                     {
-                        outcome = LS.Deletion(controlParameter);
+                        outcome = LS.Deletion();
                         if (outcome.Item1 != operation.Null)
+                        {
                             neighbours.Add(outcome);
-                        operationPerformed = outcome.Item2;
+                            operationPerformed = true;
+                        }
                     }
                     else if (randomOperationChoice < 50 + oM.GetOrderMatrix.Count && oM.GetOrderMatrix.Count > 0)
                     {
-                        for (int y = 0; y < 8; y++)
-                            if (!operationPerformed)
-                            {
-                                outcome = LS.AddOrder(controlParameter);
-                                if (outcome.Item1 != operation.Null)
-                                    operationPerformed = true;
-                            }
+                        int y = 0;
+                        while (!operationPerformed && y < 8)
+                        {
+                            outcome = LS.AddOrder();
+                            if (outcome.Item1 != operation.Null)
+                                operationPerformed = true;
+                            y++;
+                        }
                     }
                     else if(randomOperationChoice > 50)
                     {
-                        outcome = LS.SwapOrder(controlParameter);
+                        outcome = LS.SwapOrder();
                         if(outcome.Item1 != operation.Null)
                             operationPerformed = true;
                     }                    
@@ -75,7 +78,7 @@ namespace Grote_Opdracht
                     attemptCounter++;
                 }
 
-                if (operationPerformed && (outcome.Item2 || Math.Exp(outcome.Item3 / controlParameter) < random.Next(101)))
+                if (operationPerformed && (outcome.Item2 || Math.Exp(-Math.Abs(outcome.Item3) / controlParameter) < random.Next(100)))
                     LS.DoOperation(outcome.Item1, outcome.Item4);
 
                 //Console.WriteLine("Attempt: {0} finished after {1} tries", x, attemptCounter);
