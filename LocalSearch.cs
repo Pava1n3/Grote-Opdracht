@@ -105,14 +105,14 @@ namespace Grote_Opdracht
                 if (timeGain > 3 * order.totalEmptyingTime * order.frequency)
                 {
                     outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Delete, true, timeGain, new List<Tuple<int, int, int, Order>>());
-                    outcome.Item4.Add(new Tuple<int, int, int, Order>(randomRoute.Item1, randomRoute.Item2, routeIndex, bestOrder));
+                    outcome.Item4.Add(new Tuple<int, int, int, Order>(randomRoute.Item1, randomRoute.Item2, currentBest, bestOrder));
 
                     //deletionDone = true;
                 }
-                else if (10 + Math.Min(80, timeGain / 3) > random.Next(101))
+                else
                 {
                     outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Delete, false, timeGain, new List<Tuple<int, int, int, Order>>());
-                    outcome.Item4.Add(new Tuple<int, int, int, Order>(randomRoute.Item1, randomRoute.Item2, routeIndex, bestOrder));
+                    outcome.Item4.Add(new Tuple<int, int, int, Order>(randomRoute.Item1, randomRoute.Item2, currentBest, bestOrder));
                     //deletionDone = true;
                 }
             }
@@ -163,14 +163,17 @@ namespace Grote_Opdracht
                     continue;
                 }
 
-                if(day.GetRoutes.Count == 1 && day.GetRoutes[0].TotalLoad() > 19800)
-                {
-                    day.AddRoute(new Route(distanceMatrix, 2, day.GetRoutes[0].TotalTime()));
-                }
-                else if(day.GetRoutes.Count == 0)
-                {
-                    day.AddRoute(new Route(distanceMatrix, 1, 0));
-                }
+                //Warning, this adds routes!
+                //if(day.GetRoutes.Count == 1 && day.GetRoutes[0].TotalLoad() > 19800)
+                //{
+                //    day.AddRoute(new Route(distanceMatrix, 2, day.GetRoutes[0].TotalTime()));
+                //}
+                //else if(day.GetRoutes.Count == 0)
+                //{
+                //    day.AddRoute(new Route(distanceMatrix, 1, 0));
+                //}
+                if (day.GetRoutes.Count == 0)
+                    return emptyTuple;
 
                 //if a spot was possible at some point, accept it now
                 //or make a list of all spots and choose at the end (cleaner)
@@ -270,13 +273,16 @@ namespace Grote_Opdracht
             return emptyTuple;
         }
 
-        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> SwapOrder()
+        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> SwapOrder(int startDayNumber = -1, int targetDayNumber = -1, Order a = null)
         {
             //StreamWriter sw = new StreamWriter(@"...\...\swaps.txt");
             Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> outcome = emptyTuple;
+            Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> earlyday2 = emptyTuple;
+            Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> lateday1 = emptyTuple;
+            Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> lateday2 = emptyTuple;
 
             bool swapComplete = false;
-            List<Tuple<int, double>> PossibleIndexes = new List<Tuple<int, double>>();
+            List<Tuple<int, int, double>> PossibleIndexes = new List<Tuple<int, int, double>>(); //The index in the route and the routeID, and the gains
             double aTotalTime, bTotalTime, aNewTime = 0, bNewTime = 0, aGains, bGains, totalGains;
             int aLoad, bLoad, aIndex;
 
@@ -289,73 +295,178 @@ namespace Grote_Opdracht
             aIndex = random.Next(1, routeA.GetRoute.Count - 1);
             Order orderA = routeA.GetRoute[aIndex];
 
+            //Pick another random day & route
+            Tuple<int, int> targetDay = SelectRandomRoute();
+            Day dayB = week.GetWeek[targetDay.Item1];
+            Route routeB = dayB.GetRoutes[targetDay.Item2];
+
+            if (startDayNumber != -1)
+            {
+                Day day = week.GetWeek[startDayNumber];
+
+                foreach (Route route in day.GetRoutes)
+                {
+                    if (route.GetRoute.Contains(a))
+                    {
+                        orderA = a;
+                        dayA = day;
+                        routeA = route;
+                        aIndex = route.GetRoute.IndexOf(orderA);
+                    }
+                }
+
+                if (aIndex > routeA.GetRoute.Count)
+                    return emptyTuple;
+
+                targetDay = SelectRandomRoute(targetDayNumber);
+
+                dayB = week.GetWeek[targetDayNumber];
+                if (dayB.GetRoutes.Count == 0)
+                    return emptyTuple;
+                routeB = dayB.GetRoutes[targetDay.Item2];
+            }
+
             //getbit to find out which days
             //according to frequency, try swapping
-            if (orderA.frequency > 1)
+            if (orderA.frequency > 1 && startDayNumber == -1)   //the -1 check is so you don't create an infinite loop of extra calls
             {
-                return emptyTuple;
+                int day1Number = 0, day2Number = 0;
 
                 switch (orderA.frequency)
                 {
                     case 2:
-                        //Pretty tricky, try planning and see if it works!
-                        //Call swaporder for orderA, with dayB the other day this order needs planning
+                        //We try and find out which days contain our order, then attempt a swap to the other days. 
+                        if (orderA.DaysProcessed(2) == 0) //Order has not been processed on monday
+                        {
+                            if (containsOrder(2, orderA)) //there's two tuesdays in the week, check which one contains our order
+                                day1Number = 2;
+                            else
+                                day1Number = 3;
 
+                            if (containsOrder(8, orderA)) //check which friday is our day
+                                day2Number = 8;
+                            else
+                                day2Number = 9;
+
+                            //swap it to mo, th
+                            dayA = week.GetWeek[day1Number];
+
+                            foreach(Route route in dayA.GetRoutes)
+                            {
+                                if(route.GetRoute.Contains(orderA))
+                                {
+                                    routeA = route;
+                                    aIndex = routeA.GetRoute.IndexOf(orderA);
+                                }
+                            }
+
+                            dayB = week.GetWeek[0];
+                            routeB = dayA.GetRoutes[0];
+
+                            //We are (monday) number one, so that does not have to be done
+                            earlyday2 = SwapOrder(day1Number, 1, orderA);
+                            lateday1 = SwapOrder(day2Number, 6, orderA);
+                            lateday2 = SwapOrder(day2Number, 7, orderA);
+                        }
+                        else
+                        {
+                            if (containsOrder(0, orderA))
+                                day1Number = 0;
+                            else
+                                day1Number = 1;
+
+                            if (containsOrder(6, orderA))
+                                day1Number = 6;
+                            else
+                                day1Number = 7;
+
+                            //swap it to tu, fr
+                            dayA = week.GetWeek[day1Number];
+                            foreach (Route route in dayA.GetRoutes)
+                            {
+                                if (route.GetRoute.Contains(orderA))
+                                {
+                                    routeA = route;
+                                    aIndex = routeA.GetRoute.IndexOf(orderA);
+                                }
+                            }
+
+                            dayB = week.GetWeek[2];
+                            routeB = dayA.GetRoutes[0];
+
+                            //We are (tuesday) number one, so that does not have to be done
+                            earlyday2 = SwapOrder(day1Number, 3, orderA);
+                            lateday1 = SwapOrder(day2Number, 8, orderA);
+                            lateday2 = SwapOrder(day2Number, 9, orderA);
+                        }
                         break;
                     case 3:
                         return emptyTuple; //There's no use trying to swap a frequency 3 order with this method, they can only occur on set days, and this method does not swap on same days
                         break;
                     case 4:
                         //Super flexible, it's feasible as long as you don't plan twice on the same day
+                        return emptyTuple;
                         break;
                 }
             }
 
-            //Pick another random day & route
-            Tuple<int, int> targetDay = SelectRandomRoute();
-            Day dayB = week.GetWeek[targetDay.Item1];
-            Route routeB = dayB.GetRoutes[targetDay.Item2];
-
             //Get the current times
             aTotalTime = routeA.TotalTime();
-            bTotalTime = routeB.TotalTime();
 
-            //Gather all possible (one-for-one) swaps
-            for (int x = 1; x < routeB.GetRoute.Count - 1; x++ )
-            {
-                if (routeB.GetRoute[x].frequency > 1)
-                    continue;
+            //foreach (Route bRoute in dayB.GetRoutes)
+            //{
+            //    routeB = bRoute;
+                bTotalTime = routeB.TotalTime();
 
-                //Get the new time with a swapped for b
-                aNewTime = aTotalTime - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeA.GetRoute[aIndex].matrixId] //route from a - 1 to a
-                                      - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex].matrixId, routeA.GetRoute[aIndex + 1].matrixId] //route from a to a + 1
-                                      - orderA.totalEmptyingTime                                                                                  //a's emptying time
-                                      + distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeB.GetRoute[x].matrixId]      //route from a - 1 to b
-                                      + distanceMatrix.GetDistanceMatrix[routeB.GetRoute[x].matrixId, routeA.GetRoute[aIndex + 1].matrixId]      //route from a + 1 to b
-                                      + routeB.GetRoute[x].totalEmptyingTime;                                                                    //b's emptying time
-
-                bNewTime = GetNewTime(bTotalTime, routeB, orderA, x);
-
-                if (initialD.Item1 == targetDay.Item1)// && aNewTime + bNewTime > WORKINGDAY)
-                    continue;
-
-                //Calculate how much time is gained
-                aGains = aNewTime - aTotalTime;
-                bGains = bNewTime - bTotalTime;
-                totalGains = aGains + bGains;
-
-                //If, the time and load with b for a checks out, and the time and load with a for b checks out
-                aLoad = routeA.TotalLoad() - orderA.volumeOfOneContainer * orderA.numberOfContainers / 5 + routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5;
-                bLoad = routeB.TotalLoad() - routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5 + orderA.numberOfContainers * orderA.volumeOfOneContainer / 5;
-
-                if (aLoad < MAXLOAD && bLoad < MAXLOAD && dayA.CheckNewRoutes(routeA.RouteID, aNewTime) && dayB.CheckNewRoutes(routeB.RouteID, bNewTime))
+                //Gather all possible (one-for-one) swaps
+                for (int x = 1; x < routeB.GetRoute.Count - 1; x++)
                 {
-                    PossibleIndexes.Add(new Tuple<int, double>(x, totalGains));
+                    if (routeB.GetRoute[x].frequency > 1)
+                        continue;
+
+                    if (initialD.Item1 == targetDay.Item1)// && aNewTime + bNewTime > WORKINGDAY)
+                        continue;
+
+                    //Get the new time with a swapped for b
+                    if(aIndex == 0)
+                    {
+                        continue;   //could use some work
+                    }
+                    else if (aIndex == routeA.GetRoute.Count - 1)
+                    {
+                        continue;  //could use some work
+                    }
+                    else
+                    {
+                        aNewTime = aTotalTime - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeA.GetRoute[aIndex].matrixId] //route from a - 1 to a
+                                              - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex].matrixId, routeA.GetRoute[aIndex + 1].matrixId] //route from a to a + 1
+                                              - orderA.totalEmptyingTime                                                                                  //a's emptying time
+                                              + distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeB.GetRoute[x].matrixId]      //route from a - 1 to b
+                                              + distanceMatrix.GetDistanceMatrix[routeB.GetRoute[x].matrixId, routeA.GetRoute[aIndex + 1].matrixId]      //route from a + 1 to b
+                                              + routeB.GetRoute[x].totalEmptyingTime;                                                                    //b's emptying time
+
+                        bNewTime = GetNewTime(bTotalTime, routeB, orderA, x);
+                    }
+
+
+                    //Calculate how much time is gained
+                    aGains = aNewTime - aTotalTime;
+                    bGains = bNewTime - bTotalTime;
+                    totalGains = aGains + bGains;
+
+                    //If, the time and load with b for a checks out, and the time and load with a for b checks out
+                    aLoad = routeA.TotalLoad() - orderA.volumeOfOneContainer * orderA.numberOfContainers / 5 + routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5;
+                    bLoad = routeB.TotalLoad() - routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5 + orderA.numberOfContainers * orderA.volumeOfOneContainer / 5;
+
+                    if (aLoad < MAXLOAD && bLoad < MAXLOAD && dayA.CheckNewRoutes(routeA.RouteID, aNewTime) && dayB.CheckNewRoutes(routeB.RouteID, bNewTime))
+                    {
+                        PossibleIndexes.Add(new Tuple<int,int, double>(x, routeB.RouteID, totalGains));
+                    }
                 }
-            }
+            //}
 
             //Akin to addorder, go over them
-            int swapCounter = 0, MaximumAttempts = Math.Max(1, PossibleIndexes.Count / 5);
+            int swapCounter = 0, MaximumAttempts = Math.Max(1, PossibleIndexes.Count);// / 5);
             int randomIndex;
 
             while(!swapComplete && swapCounter < MaximumAttempts)
@@ -364,7 +475,9 @@ namespace Grote_Opdracht
                     break;
 
                 randomIndex = random.Next(PossibleIndexes.Count);
-                Tuple<int, double> possibility = PossibleIndexes[randomIndex];
+                Tuple<int, int, double> possibility = PossibleIndexes[randomIndex];
+                if (routeB.RouteID != possibility.Item2)
+                    routeB = dayB.GetRoutes[possibility.Item2 - 1];
                 Order orderB = routeB.GetRoute[possibility.Item1];
 
                 if(possibility.Item2 <= 0)
@@ -374,11 +487,6 @@ namespace Grote_Opdracht
                     outcome.Item4.Add(new Tuple<int, int, int, Order>(targetDay.Item1, targetDay.Item2, possibility.Item1, orderB));
 
                     swapComplete = true;
-
-                    //Console.WriteLine("SWAPPED: =======================");
-                    //Console.WriteLine("RouteID of a {0} ; Daynumber {1}; StartTime {2}; Total time {3}, Check {4} ", routeA.RouteID, initialD.Item1, routeA.StartTime, routeA.TotalTime(), dayA.CheckDay());
-                    //Console.WriteLine("RouteID of b {0} ; Daynumber {1}; StartTime {2}; Total time {3}, Check {4} ", routeB.RouteID, targetDay.Item1, routeB.StartTime, routeB.TotalTime(), dayB.CheckDay());
-                    //Console.WriteLine("================================");
                 }
                 else
                 {
@@ -393,19 +501,51 @@ namespace Grote_Opdracht
                     dayB.UpdateRoutes();
 
                     swapComplete = true;
-
-                    //Console.WriteLine("SWAPPED: =======================");
-                    //Console.WriteLine("RouteID of a {0} ; Newtime {1}, StartTime {2}, Day time {3}, Check {4} {5}", routeA.RouteID, aNewTime, routeA.StartTime, routeA.TotalTime(), dayA.CheckDay(), dayA.CheckNewRoutes(routeA.RouteID, routeA.TotalTime()));
-                    //Console.WriteLine("RouteID of b {0} ; Newtime {1}, StartTime {2}, Day time {3}, Check {4} {5}", routeB.RouteID, bNewTime, routeB.StartTime, routeB.TotalTime(), dayB.CheckDay(), dayB.CheckNewRoutes(routeB.RouteID, routeB.TotalTime()));
-                    //Console.WriteLine("================================");
                 }
 
+                PossibleIndexes.Remove(possibility);
                 swapCounter++;
             }
 
+            //Add the additional orders to the list in outcome, so everything will be swapped
+            if(orderA.frequency > 1)
+            {
+                switch (orderA.frequency)
+                {
+                    case 2:
+                        if ((outcome.Item1 != operation.Null || earlyday2.Item1 != operation.Null) && (lateday1.Item1 != operation.Null || lateday2.Item1 != operation.Null))
+                        {
+                            if (outcome.Item1 == operation.Null)
+                                outcome = earlyday2;
 
+                            if (lateday1.Item1 == operation.Null)
+                            {
+                                outcome.Item4.Add(lateday2.Item4[0]);
+                                outcome.Item4.Add(lateday2.Item4[1]);
+                            }
+                        }
+                        break;
+                }
+            }
+                
+            
 
             return outcome;
+        }
+
+        public bool containsOrder(int dayNumber, Order order)
+        {
+            bool contains = false;
+
+            Day day = week.GetWeek[dayNumber];
+            
+            foreach(Route route in day.GetRoutes)
+            {
+                if (route.GetRoute.Contains(order))
+                    contains = true;
+            }
+
+            return contains;
         }
 
         /// <summary>
@@ -483,14 +623,16 @@ namespace Grote_Opdracht
             {
                 case operation.Delete:
                     route = week.GetWeek[orderData[0].Item1].GetRoutes[orderData[0].Item2];
-                    order = orderData[0].Item4;
+                    order = route.GetRoute[orderData[0].Item3];
                     route.Remove(orderData[0].Item3);
+                    if (route.GetRoute.Count == 0)
+                        week.GetWeek[orderData[0].Item1].GetRoutes.Remove(route);
                     week.GetWeek[orderData[0].Item1].UpdateRoutes();
                     orderMatrix.GetOrderMatrix.Add(order.orderId, order);
                     break;
                 case operation.Add:
                     order = orderData[0].Item4;
-                    week.GetWeek[orderData[0].Item1].GetRoutes[orderData[0].Item2 - 1].GetRoute.Insert(orderData[0].Item3, order);
+                    week.GetWeek[orderData[0].Item1].GetRoutes[orderData[0].Item2].GetRoute.Insert(orderData[0].Item3, order);
                     week.GetWeek[orderData[0].Item1].UpdateRoutes();
                     orderMatrix.GetOrderMatrix.Remove(order.orderId);
                     break;
@@ -516,6 +658,32 @@ namespace Grote_Opdracht
                     routeB.Remove(bIndex);
                     routeB.GetRoute.Insert(bIndex, orderA);
                     dayB.UpdateRoutes();
+
+                    //In case we swapped a frequency 2 order
+                    if(orderData.Count == 4)
+                    {
+                        dayA = week.GetWeek[orderData[2].Item1];
+                        dayB = week.GetWeek[orderData[3].Item1];
+
+                        routeA = dayA.GetRoutes[orderData[2].Item2];
+                        routeB = dayB.GetRoutes[orderData[3].Item2];
+
+                        aIndex = orderData[2].Item3;
+                        bIndex = orderData[3].Item3;
+
+                        orderA = orderData[2].Item4;
+                        orderB = orderData[3].Item4;
+
+                        //remove a, insert b, clean up
+                        routeA.Remove(aIndex);
+                        routeA.GetRoute.Insert(aIndex, orderB);
+                        dayA.UpdateRoutes();
+
+                        //Remove b, insert a, clean up
+                        routeB.Remove(bIndex);
+                        routeB.GetRoute.Insert(bIndex, orderA);
+                        dayB.UpdateRoutes();
+                    }
                     break;
             }
         }
@@ -524,16 +692,18 @@ namespace Grote_Opdracht
         /// Returns a tuple with a random day and route.
         /// </summary>
         /// <returns></returns>
-        public Tuple<int, int> SelectRandomRoute()
+        public Tuple<int, int> SelectRandomRoute(int day = -1)
         {
             // Pick a random day and route.
             Tuple<int, int> tuple;
             int dayN = random.Next(week.GetWeek.Count());
+            if (day != -1)
+                dayN = day;
             int routeN = random.Next(week.GetWeek[dayN].GetRoutes.Count());
 
             // If you've picked a day without any routes.
             if (week.GetWeek[dayN].GetRoutes.Count() == 0)
-                // Look for another option.
+            // Look for another option.
                 tuple = SelectRandomRoute();
             else
                 // If you've a valid choice
