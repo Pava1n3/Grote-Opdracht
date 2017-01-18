@@ -9,15 +9,6 @@ namespace Grote_Opdracht
 {
     class LocalSearch
     {
-        //TECHNICALLY, DO WE NEED TO CHECK IF WE CAN CREATE A NEW ROUTE OR DELETE AN EMPTY ONE? IT'S RATHER UNLIKELY A ROUTE WILL BECOME COMPLETELY EMPTY AND IT WILL BE FILLED UP EVENTUALLY
-        //ALSO, RUNNING MORE THAN TWO ROUTES IS RISKY AT BEST. THE TRIP FROM THE LASTPOINT OF ONE ROUTE TO THE FIRST OF A NEW ONE NEEDS TO EXCEED 30MINS PLUS THE DRIVE TIMES TO AND FROM THE DEPOT
-
-        /* Add a random order, at a fairly random position (AddOrder)
-         * Delete a random order (DeleteOrder)
-         * Swap two random orders
-         * Put an order in a different time of the route/day (SwapLocalOrders)
-         */
-
         //Constants
         private const int HALFFIVE = 41400;
         private const int DEPOTMATRIXID = 287;
@@ -273,7 +264,7 @@ namespace Grote_Opdracht
             return emptyTuple;
         }
 
-        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> SwapOrder(int startDayNumber = -1, int targetDayNumber = -1, Order a = null)
+        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> SwapOrder(int startDayNumber = -1, int targetDayNumber = -1, Order a = null, int routeNumber = -1, int indexInRoute = -1)
         {
             //StreamWriter sw = new StreamWriter(@"...\...\swaps.txt");
             Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> outcome = emptyTuple;
@@ -281,8 +272,8 @@ namespace Grote_Opdracht
             Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> lateday1 = emptyTuple;
             Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> lateday2 = emptyTuple;
 
-            bool swapComplete = false;
-            List<Tuple<int, int, double>> PossibleIndexes = new List<Tuple<int, int, double>>(); //The index in the route and the routeID, and the gains
+            bool indexFound = false;
+            Tuple<int, int, double> possibility = new Tuple<int, int, double>(-1, -1, double.MaxValue); //The index in the route and the routeID, and the gains
             double aTotalTime, bTotalTime, aNewTime = 0, bNewTime = 0, aGains, bGains, totalGains;
             int aLoad, bLoad, aIndex;
 
@@ -300,23 +291,14 @@ namespace Grote_Opdracht
             Day dayB = week.GetWeek[targetDay.Item1];
             Route routeB = dayB.GetRoutes[targetDay.Item2];
 
+            //If we have been called as part of a higher-frequency swap
             if (startDayNumber != -1)
             {
-                Day day = week.GetWeek[startDayNumber];
-
-                foreach (Route route in day.GetRoutes)
-                {
-                    if (route.GetRoute.Contains(a))
-                    {
-                        orderA = a;
-                        dayA = day;
-                        routeA = route;
-                        aIndex = route.GetRoute.IndexOf(orderA);
-                    }
-                }
-
-                if (aIndex > routeA.GetRoute.Count)
-                    return emptyTuple;
+                //you can decide dayA and dayB from the given data
+                dayA = week.GetWeek[startDayNumber];
+                routeA = dayA.GetRoutes[routeNumber - 1];
+                orderA = a;
+                aIndex = indexInRoute;
 
                 targetDay = SelectRandomRoute(targetDayNumber);
 
@@ -326,189 +308,139 @@ namespace Grote_Opdracht
                 routeB = dayB.GetRoutes[targetDay.Item2];
             }
 
-            //getbit to find out which days
-            //according to frequency, try swapping
+            #region frequencylt1
             if (orderA.frequency > 1 && startDayNumber == -1)   //the -1 check is so you don't create an infinite loop of extra calls
             {
-                int day1Number = 0, day2Number = 0;
+                int targetDayIndex = -1, targetRouteIndex = -1, targetIndexInRoute = -1;
 
                 switch (orderA.frequency)
                 {
                     case 2:
                         //We try and find out which days contain our order, then attempt a swap to the other days. 
-                        if (orderA.DaysProcessed(2) == 0) //Order has not been processed on monday
-                        {
-                            if (containsOrder(2, orderA)) //there's two tuesdays in the week, check which one contains our order
-                                day1Number = 2;
-                            else
-                                day1Number = 3;
+                            //Now, we have to check both tuesdays (for truck 1 and truck 2) to see which one contains the order. We will then attempt a swap from that day to a monday
+                            //likewise, we call this method again with some additional parameters for the two thursdays (to swap from friday to thursday)
 
-                            if (containsOrder(8, orderA)) //check which friday is our day
-                                day2Number = 8;
-                            else
-                                day2Number = 9;
-
-                            //swap it to mo, th
-                            dayA = week.GetWeek[day1Number];
-
-                            foreach(Route route in dayA.GetRoutes)
+                            if(initialD.Item1 < 2)//dayA is mon
                             {
-                                if(route.GetRoute.Contains(orderA))
+                                //swap to tue, later day in the week is thur -> we don't know which thursday
+                                //dayB should be 2, earlyday2 should be 3 (swap a monday to tuesday)
+                                dayB = week.GetWeek[2];
+                                //routeB = dayB.GetRoutes[random.Next(dayB.GetRoutes.Count)];
+                                earlyday2 = SwapOrder(initialD.Item1, 3, orderA, initialD.Item2 + 1, aIndex);
+
+                                //secondly, a thursday has to be found and swapped
+                                for (int t = 6; t < 8; t++)
                                 {
-                                    routeA = route;
-                                    aIndex = routeA.GetRoute.IndexOf(orderA);
+                                    Day day = week.GetWeek[t];
+
+                                    foreach (Route route in day.GetRoutes)
+                                    {
+                                        if (route.GetRoute.Contains(orderA))
+                                        {
+                                            targetRouteIndex = route.RouteID;
+                                            targetDayIndex = t;
+                                            targetIndexInRoute = route.GetRoute.IndexOf(orderA);
+                                            //pass the daynumber, routenumber and index in the route
+                                            indexFound = true;
+                                        }
+
+                                        if (indexFound)
+                                        {
+                                            t = 8;
+                                            break;
+                                        }
+                                    }
                                 }
+
+                                if (!indexFound)
+                                    return emptyTuple;
+
+                                lateday1 = SwapOrder(targetDayIndex, 8, orderA, targetRouteIndex, targetIndexInRoute);  //try and swap to a friday
+                                lateday2 = SwapOrder(targetDayIndex, 9, orderA, targetRouteIndex, targetIndexInRoute);  //try and swap to a friday
                             }
-
-                            dayB = week.GetWeek[0];
-                            routeB = dayA.GetRoutes[0];
-
-                            //We are (monday) number one, so that does not have to be done
-                            earlyday2 = SwapOrder(day1Number, 1, orderA);
-                            lateday1 = SwapOrder(day2Number, 6, orderA);
-                            lateday2 = SwapOrder(day2Number, 7, orderA);
-                        }
-                        else
-                        {
-                            if (containsOrder(0, orderA))
-                                day1Number = 0;
                             else
-                                day1Number = 1;
-
-                            if (containsOrder(6, orderA))
-                                day1Number = 6;
-                            else
-                                day1Number = 7;
-
-                            //swap it to tu, fr
-                            dayA = week.GetWeek[day1Number];
-                            foreach (Route route in dayA.GetRoutes)
                             {
-                                if (route.GetRoute.Contains(orderA))
-                                {
-                                    routeA = route;
-                                    aIndex = routeA.GetRoute.IndexOf(orderA);
-                                }
+                                return emptyTuple;  //nothing else yet!
                             }
-
-                            dayB = week.GetWeek[2];
-                            routeB = dayA.GetRoutes[0];
-
-                            //We are (tuesday) number one, so that does not have to be done
-                            earlyday2 = SwapOrder(day1Number, 3, orderA);
-                            lateday1 = SwapOrder(day2Number, 8, orderA);
-                            lateday2 = SwapOrder(day2Number, 9, orderA);
-                        }
+                        
                         break;
                     case 3:
                         return emptyTuple; //There's no use trying to swap a frequency 3 order with this method, they can only occur on set days, and this method does not swap on same days
-                        break;
                     case 4:
                         //Super flexible, it's feasible as long as you don't plan twice on the same day
                         return emptyTuple;
-                        break;
                 }
             }
+#endregion
 
             //Get the current times
             aTotalTime = routeA.TotalTime();
 
-            //foreach (Route bRoute in dayB.GetRoutes)
-            //{
-            //    routeB = bRoute;
-                bTotalTime = routeB.TotalTime();
+            bTotalTime = routeB.TotalTime();
 
-                //Gather all possible (one-for-one) swaps
-                for (int x = 1; x < routeB.GetRoute.Count - 1; x++)
-                {
-                    if (routeB.GetRoute[x].frequency > 1)
-                        continue;
-
-                    if (initialD.Item1 == targetDay.Item1)// && aNewTime + bNewTime > WORKINGDAY)
-                        continue;
-
-                    //Get the new time with a swapped for b
-                    if(aIndex == 0)
-                    {
-                        continue;   //could use some work
-                    }
-                    else if (aIndex == routeA.GetRoute.Count - 1)
-                    {
-                        continue;  //could use some work
-                    }
-                    else
-                    {
-                        aNewTime = aTotalTime - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeA.GetRoute[aIndex].matrixId] //route from a - 1 to a
-                                              - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex].matrixId, routeA.GetRoute[aIndex + 1].matrixId] //route from a to a + 1
-                                              - orderA.totalEmptyingTime                                                                                  //a's emptying time
-                                              + distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeB.GetRoute[x].matrixId]      //route from a - 1 to b
-                                              + distanceMatrix.GetDistanceMatrix[routeB.GetRoute[x].matrixId, routeA.GetRoute[aIndex + 1].matrixId]      //route from a + 1 to b
-                                              + routeB.GetRoute[x].totalEmptyingTime;                                                                    //b's emptying time
-
-                        bNewTime = GetNewTime(bTotalTime, routeB, orderA, x);
-                    }
-
-
-                    //Calculate how much time is gained
-                    aGains = aNewTime - aTotalTime;
-                    bGains = bNewTime - bTotalTime;
-                    totalGains = aGains + bGains;
-
-                    //If, the time and load with b for a checks out, and the time and load with a for b checks out
-                    aLoad = routeA.TotalLoad() - orderA.volumeOfOneContainer * orderA.numberOfContainers / 5 + routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5;
-                    bLoad = routeB.TotalLoad() - routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5 + orderA.numberOfContainers * orderA.volumeOfOneContainer / 5;
-
-                    if (aLoad < MAXLOAD && bLoad < MAXLOAD && dayA.CheckNewRoutes(routeA.RouteID, aNewTime) && dayB.CheckNewRoutes(routeB.RouteID, bNewTime))
-                    {
-                        PossibleIndexes.Add(new Tuple<int,int, double>(x, routeB.RouteID, totalGains));
-                    }
-                }
-            //}
-
-            //Akin to addorder, go over them
-            int swapCounter = 0, MaximumAttempts = Math.Max(1, PossibleIndexes.Count);// / 5);
-            int randomIndex;
-
-            while(!swapComplete && swapCounter < MaximumAttempts)
+            #region getswaps
+            //Gather all possible (one-for-one) swaps
+            for (int x = 1; x < routeB.GetRoute.Count - 1; x++)
             {
-                if (PossibleIndexes.Count == 0)
-                    break;
+                if (routeB.GetRoute[x].frequency > 1)
+                    continue;
 
-                randomIndex = random.Next(PossibleIndexes.Count);
-                Tuple<int, int, double> possibility = PossibleIndexes[randomIndex];
-                if (routeB.RouteID != possibility.Item2)
-                    routeB = dayB.GetRoutes[possibility.Item2 - 1];
-                Order orderB = routeB.GetRoute[possibility.Item1];
+                if (initialD.Item1 == targetDay.Item1)// && aNewTime + bNewTime > WORKINGDAY)
+                    continue;
 
-                if(possibility.Item2 <= 0)
+                //Get the new time with a swapped for b
+                if(aIndex == 0)
                 {
-                    outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Swap, true, possibility.Item2, new List<Tuple<int, int, int, Order>>());
-                    outcome.Item4.Add(new Tuple<int, int, int, Order>(initialD.Item1, initialD.Item2, aIndex, orderA)); //Add order A
-                    outcome.Item4.Add(new Tuple<int, int, int, Order>(targetDay.Item1, targetDay.Item2, possibility.Item1, orderB));
-
-                    swapComplete = true;
+                    continue;   //could use some work
+                }
+                else if (aIndex == routeA.GetRoute.Count - 1)
+                {
+                    continue;  //could use some work
                 }
                 else
                 {
-                    //remove a, insert b, clean up
-                    routeA.Remove(aIndex);
-                    routeA.GetRoute.Insert(aIndex, orderB);
-                    dayA.UpdateRoutes();
+                    aNewTime = aTotalTime - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeA.GetRoute[aIndex].matrixId] //route from a - 1 to a
+                                            - distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex].matrixId, routeA.GetRoute[aIndex + 1].matrixId] //route from a to a + 1
+                                            - orderA.totalEmptyingTime                                                                                  //a's emptying time
+                                            + distanceMatrix.GetDistanceMatrix[routeA.GetRoute[aIndex - 1].matrixId, routeB.GetRoute[x].matrixId]      //route from a - 1 to b
+                                            + distanceMatrix.GetDistanceMatrix[routeB.GetRoute[x].matrixId, routeA.GetRoute[aIndex + 1].matrixId]      //route from a + 1 to b
+                                            + routeB.GetRoute[x].totalEmptyingTime;                                                                    //b's emptying time
 
-                    //Remove b, insert a, clean up
-                    routeB.Remove(possibility.Item1);
-                    routeB.GetRoute.Insert(possibility.Item1, orderA);
-                    dayB.UpdateRoutes();
-
-                    swapComplete = true;
+                    bNewTime = GetNewTime(bTotalTime, routeB, orderA, x);
                 }
 
-                PossibleIndexes.Remove(possibility);
-                swapCounter++;
+
+                //Calculate how much time is gained
+                aGains = aNewTime - aTotalTime;
+                bGains = bNewTime - bTotalTime;
+                totalGains = aGains + bGains;
+
+                //If, the time and load with b for a checks out, and the time and load with a for b checks out
+                aLoad = routeA.TotalLoad() - orderA.volumeOfOneContainer * orderA.numberOfContainers / 5 + routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5;
+                bLoad = routeB.TotalLoad() - routeB.GetRoute[x].volumeOfOneContainer * routeB.GetRoute[x].numberOfContainers / 5 + orderA.numberOfContainers * orderA.volumeOfOneContainer / 5;
+
+                if (aLoad < MAXLOAD && bLoad < MAXLOAD && dayA.CheckNewRoutes(routeA.RouteID, aNewTime) && dayB.CheckNewRoutes(routeB.RouteID, bNewTime))   //if the new solution is valid
+                {
+                    //PossibleIndexes.Add(new Tuple<int,int, double>(x, routeB.RouteID, totalGains));
+                    if (totalGains < possibility.Item3) //if the new possibility is better than the current best, accept it
+                    {
+                        possibility = new Tuple<int, int, double>(x, routeB.RouteID, totalGains);
+                    }
+                }
+            }
+            #endregion
+
+            if (possibility.Item1 != -1)    //if we found a possible swap, we return it (and in this case, it's the best swap we found)
+            {
+                Order orderB = week.GetWeek[targetDay.Item1].GetRoutes[targetDay.Item2].GetRoute[possibility.Item1];
+
+                outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Swap, true, possibility.Item2, new List<Tuple<int, int, int, Order>>());
+                outcome.Item4.Add(new Tuple<int, int, int, Order>(initialD.Item1, initialD.Item2, aIndex, orderA)); //Add order A (day, route, index in route, order)
+                outcome.Item4.Add(new Tuple<int, int, int, Order>(targetDay.Item1, targetDay.Item2, possibility.Item1, orderB));
             }
 
             //Add the additional orders to the list in outcome, so everything will be swapped
-            if(orderA.frequency > 1)
+            if(orderA.frequency > 1 && startDayNumber == -1)
             {
                 switch (orderA.frequency)
                 {
@@ -516,19 +448,26 @@ namespace Grote_Opdracht
                         if ((outcome.Item1 != operation.Null || earlyday2.Item1 != operation.Null) && (lateday1.Item1 != operation.Null || lateday2.Item1 != operation.Null))
                         {
                             if (outcome.Item1 == operation.Null)
-                                outcome = earlyday2;
+                            {
+                                outcome = earlyday2;    //the swap from the other first day succeeded, use that one
+                            }
 
                             if (lateday1.Item1 == operation.Null)
                             {
-                                outcome.Item4.Add(lateday2.Item4[0]);
-                                outcome.Item4.Add(lateday2.Item4[1]);
+                                outcome.Item4.Add(lateday2.Item4[0]);   //orderA
+                                outcome.Item4.Add(lateday2.Item4[1]);   //orderB
+                            }
+                            else
+                            {
+                                outcome.Item4.Add(lateday1.Item4[0]);   //orderA
+                                outcome.Item4.Add(lateday1.Item4[1]);   //orderB
                             }
                         }
+                        else
+                            return emptyTuple;
                         break;
                 }
             }
-                
-            
 
             return outcome;
         }
