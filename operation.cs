@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace Grote_Opdracht
 {
-    public enum operation { Add, Swap, Delete, Null };
+    public enum operation { Add, Swap, Delete, Shift, Null };
 }
