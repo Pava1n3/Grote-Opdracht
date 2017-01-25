@@ -125,13 +125,10 @@ namespace Grote_Opdracht
             int key = keys[random.Next(keys.Length)];
 
             Order order = orderMatrix.GetOrderMatrix[key];
-            
-            List<Tuple<int, int, int, double>> possibleSpots = new List<Tuple<int, int, int, double>>();    //weekIndex, routeID, index in the route, the extra time this route takes
 
-            bool spotFound = false;
-            int weekIndex = 0, weekCounter = 0, newLoad, spotCounter = 0, maximumAttempts; //index keeps track of which day we are at, counter helps exiting the while if we have checked the whole week
+            int weekIndex = 0, weekCounter = 0, newLoad, bestIndex = -1, bestRouteID = -1; //index keeps track of which day we are at, counter helps exiting the while if we have checked the whole week
             //Doubles for the current time of a route, the new time of a route
-            double totalTime = 0, newTime = 0;
+            double totalTime = 0, newTime = 0, timeGain = 0, currentBest = double.MinValue;
 
             weekIndex = random.Next(week.GetWeek.Count);
 
@@ -143,26 +140,6 @@ namespace Grote_Opdracht
                 foreach (Route route in day.GetRoutes)
                     time += route.TotalTime();
 
-                if(time - 41300 < random.Next(100))    //If there's not likely going to be room in this day, skip checking it altogether
-                {
-                    //So we don't go out of the week's bounds
-                    weekIndex++;
-                    weekCounter++;
-                    if (weekIndex >= week.GetWeek.Count)
-                        weekIndex = 0;
-
-                    continue;
-                }
-
-                //Warning, this adds routes!
-                //if(day.GetRoutes.Count == 1 && day.GetRoutes[0].TotalLoad() > 19800)
-                //{
-                //    day.AddRoute(new Route(distanceMatrix, 2, day.GetRoutes[0].TotalTime()));
-                //}
-                //else if(day.GetRoutes.Count == 0)
-                //{
-                //    day.AddRoute(new Route(distanceMatrix, 1, 0));
-                //}
                 if (day.GetRoutes.Count == 0)
                     return emptyTuple;
 
@@ -205,17 +182,15 @@ namespace Grote_Opdracht
                         //The new load, now includes the new order
                         newLoad = route.TotalLoad() + order.volumeOfOneContainer * order.numberOfContainers / 5;
 
-                        //insert into route
-                        //updateroutes
-                        //check
-                        //remove from route
-
-                        //add difference in time to relevant starttimes
+                        //Positive if new is better, neg if it is worse
+                        timeGain = totalTime - newTime + 3 * order.totalEmptyingTime;
 
                         //Check if the new route is feasible
-                        if (newLoad < MAXLOAD && day.CheckNewRoutes(route.RouteID, newTime))
+                        if (newLoad < MAXLOAD && day.CheckNewRoutes(route.RouteID, newTime) && timeGain > currentBest)
                         {
-                            possibleSpots.Add(new Tuple<int, int, int, double>(weekIndex, route.RouteID, y, newTime - totalTime));
+                            currentBest = timeGain;
+                            bestRouteID = route.RouteID;
+                            bestIndex = y;
                         }
                     }
                 }
@@ -227,33 +202,11 @@ namespace Grote_Opdracht
                     weekIndex = 0;
             }
 
-            if (possibleSpots.Count == 0)
-                return emptyTuple;
 
-            maximumAttempts = Math.Max(1, possibleSpots.Count / 4);
-
-            while(!spotFound && spotCounter < maximumAttempts)
+            if(bestIndex != -1)
             {
-                //Pick a random thingy from the possible spots
-                int index = random.Next(possibleSpots.Count);
-
-                Tuple<int, int, int, double> spot = possibleSpots[index];   //week, route, index, gains
-
-                //If it's an improvement
-                if(spot.Item4 <= 3 * orderMatrix.GetOrderMatrix[order.orderId].totalEmptyingTime * orderMatrix.GetOrderMatrix[order.orderId].frequency)
-                {
-                    outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Add, true, spot.Item4, new List<Tuple<int,int,int,Order>>());
-                    outcome.Item4.Add(new Tuple<int, int, int, Order>(spot.Item1, spot.Item2 - 1, spot.Item3, order));
-                    spotFound = true;
-                }
-                else// if (10 + spot.Item4 / 6 < random.Next(101))//Spot can still be accepted because we are annealing simulations
-                {
-                    outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Add, false, spot.Item4, new List<Tuple<int, int, int, Order>>());
-                    outcome.Item4.Add(new Tuple<int, int, int, Order>(spot.Item1, spot.Item2 - 1, spot.Item3, order));
-                    spotFound = true;
-                }
-
-                spotCounter++;
+                outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Add, true, timeGain, new List<Tuple<int, int, int, Order>>());
+                outcome.Item4.Add(new Tuple<int, int, int, Order>(weekIndex, bestRouteID - 1, bestIndex, order));
             }
 
             return outcome;
