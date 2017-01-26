@@ -40,7 +40,7 @@ namespace Grote_Opdracht
                 {
                     randomOperationChoice = random.Next(100);
 
-                    LS.SwapOrder();
+                    LS.ShiftOrder();
                     operationPerformed = true;
 
                     //if(randomOperationChoice > 50)
@@ -100,7 +100,7 @@ namespace Grote_Opdracht
                     attemptCounter++;
                 }
 
-                if (operationPerformed && (outcome.Item2 || Math.Exp(-Math.Abs(outcome.Item3) / controlParameter) < random.NextDouble()))
+                if (operationPerformed)
                     LS.DoOperation(outcome.Item1, outcome.Item4);
 
                 //Console.WriteLine("Attempt: {0} finished after {1} tries", x, attemptCounter);

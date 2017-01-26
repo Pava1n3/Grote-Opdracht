@@ -212,14 +212,18 @@ namespace Grote_Opdracht
             return outcome;
         }
 
-        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> ShiftOrder()
+        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> ShiftOrder(int startDayID = -1, int startDayRoute = -1, int startDayRouteIndex = -1, int targetDayNumber = -1, Order startOrder = null)
         {
             //Grab a random order
             //Grab a random day + route OR same route
             //check best shift
             double newTime, currentTime, targetRouteTimeDifference, targetDayTime = 0, bestShiftGain = double.MaxValue;
-            int currentLoad, previousOrderMatrixID, nextOrderMatrixID, bestShiftIndex = -1;
+            int currentLoad = -1, previousOrderMatrixID, nextOrderMatrixID, bestShiftIndex = -1;
             bool targetRouteFound = false;
+
+            //This Tuple may contain information for an additional swap
+            Tuple<int, int, int, Order> secondSwapStart = null;
+            Tuple<int, int, int, Order> secondSwapTarget = null;
 
             //Grab a random day and route twice, start and target days
             Tuple<int, int> start = SelectRandomRoute();
@@ -234,94 +238,232 @@ namespace Grote_Opdracht
             int orderIndex = random.Next(startRoute.GetRoute.Count);
             Order order = startRoute.GetRoute[orderIndex];
 
-            //A small check, if the current goal is impossible to plan because of waste volume, reroll the target day
-            for (int i = 0; i < 9; i++)
+            if(startDayID != -1)//This shift was called as a subcall from another shift, as part of shifting a higher frequency order
             {
+                //We change the start Tuple, because it is used to generate the returned tuple
+                //startDayID is the index in the week, startDayRoute is the ID of the route containing our order in that day, we also change the orderIndex because that is used by some calculations
+                start = new Tuple<int, int>(startDayID, startDayRoute);
+                startDay = week.GetWeek[startDayID];
+                startRoute = startDay.GetRoutes[startDayRoute];
+                orderIndex = startDayRouteIndex;
+
+                order = startOrder;
+
+                target = SelectRandomRoute(targetDayNumber);
                 targetDay = week.GetWeek[target.Item1];
                 targetRoute = targetDay.GetRoutes[target.Item2];
                 currentLoad = targetRoute.TotalLoad();
 
-                //Would it be smart to add a check to see if the time is larger then a certain amount? We might miss out on some good insertions that way though.....
                 if (currentLoad + order.numberOfContainers * order.volumeOfOneContainer > MAXLOAD)
-                    target = SelectRandomRoute();
-                else
-                {
-                    targetRouteFound = true;
-                    break;
-                }
+                    return emptyTuple;
             }
 
-            //In case we have not found a potentially suitable route (garbage volume wise)
-            if (!targetRouteFound)
-                return emptyTuple;    
+            //If order frequency is larger than 1 and this is not a shift called by a higher frequency order
+            if (order.frequency > 1 && startDayID == -1)
+            {
+                #region frequency handling
+                switch (order.frequency)
+                {
+                    case 2:
+                        //shift on the same day (only one regular shift) or shift two things
+                        if (targetDay.DayNumber != startDay.DayNumber)
+                        {
+                            int unprocessedDay = -1, processedDay = -1;
+                            Tuple<int, int, int> indices = new Tuple<int,int,int>(-1, -1, -1);
+                            Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> otherShift = null;
 
+                            for (int i = 1; i < 3; i++)
+                            {
+                                if (!order.GetBit(i))
+                                    unprocessedDay = i;
+                                else
+                                    processedDay = i;
+                            }
+
+                            if (random.Next(0, 2) > 1)
+                            {
+                                //startday can be mon, tue, thur, fri
+                                //can be in the first or latter part of the week
+                                //then, it can be bigger or smaller than the unprocesedDay
+                                if(startDay.DayNumber > 2)  //which means target should be in the latter part of the week as well
+                                {
+                                    if (startDay.DayNumber - 3 > unprocessedDay) //unprocessed is mon
+                                    {
+                                        //other call should shift tue to mon, need to find out which truck does the order
+                                        indices = FindOccurence(2, order); //this method finds out which day exactly contains the order
+                                    }
+                                    else
+                                    {
+                                        //other call should shift mon to tue, need to find out which truck does the order
+                                        indices = FindOccurence(1, order); //this method finds out which day exactly contains the order
+                                    }
+
+                                    //target should be in the latter half of the week
+                                    target = SelectRandomRoute(random.Next((unprocessedDay + 3) * 2 - 2, (unprocessedDay + 3) * 2));//take the unprocessedDay
+                                }
+                                else //startDay is in the first half of the week
+                                {
+                                    if(startDay.DayNumber > unprocessedDay)
+                                    {
+                                        indices = FindOccurence(2, order);
+                                    }
+                                    else
+                                    {
+                                        indices = FindOccurence(1, order);
+                                    }
+
+                                    target = SelectRandomRoute(random.Next(unprocessedDay * 2 - 2, unprocessedDay * 2));
+                                }
+
+                                //Just in case indices didn't return correct values
+                                if (indices.Item1 == -1 || indices.Item2 == -1 || indices.Item3 == -1)
+                                    return emptyTuple;
+
+                                //Do a call to ShiftOrder
+                                otherShift = ShiftOrder(indices.Item1, indices.Item2, indices.Item3, random.Next(0, 2), order);
+
+                                if(otherShift == null)
+                                {
+                                    return emptyTuple;
+                                }
+                            }
+                            else
+                                target = SelectRandomRoute(random.Next(startDay.DayNumber * 2 - 2, startDay.DayNumber * 2));//Go with the current day
+
+                            targetDay = week.GetWeek[target.Item1];
+                            targetRoute = targetDay.GetRoutes[target.Item2];
+                            currentLoad = targetRoute.TotalLoad();
+                        }
+                        break;
+                    case 3:
+                        //only shift on the same day
+                        if(targetDay.DayNumber != startDay.DayNumber)
+                        {
+                            //This random chooses one of the two trucks (by getting an index in the week list)
+                            int dayIndex = random.Next(startDay.DayNumber * 2 - 2, startDay.DayNumber * 2);
+                            target = SelectRandomRoute(dayIndex);
+
+                            targetDay = week.GetWeek[dayIndex];
+                            targetRoute = targetDay.GetRoutes[target.Item2];
+                            currentLoad = targetRoute.TotalLoad();
+                        }
+                        break;
+                    case 4:
+                        //shift only on same day OR to the one free day
+                        if(targetDay.DayNumber != startDay.DayNumber)
+                        {
+                            int unprocessedDay = -1;
+                            for(int i = 1; i < 6; i++)
+                            {
+                                if (!order.GetBit(i))
+                                    unprocessedDay = i;
+                            }
+
+                            if (random.Next(0, 2) > 1)
+                                target = SelectRandomRoute(random.Next(unprocessedDay * 2 - 2, unprocessedDay * 2));//take the unprocessedDay
+                            else
+                                target = SelectRandomRoute(random.Next(startDay.DayNumber * 2 - 2, startDay.DayNumber * 2));//Go with the current day
+
+                            targetDay = week.GetWeek[target.Item1];
+                            targetRoute = targetDay.GetRoutes[target.Item2];
+                            currentLoad = targetRoute.TotalLoad();
+
+                        }
+                        break;
+                }
+                #endregion
+
+                if (currentLoad + order.numberOfContainers * order.volumeOfOneContainer > MAXLOAD)
+                    return emptyTuple;
+            }
+            else if(startDayID == -1) //To make sure we don't go changing target days if we are swapping a higher frequency order (that would be disastrous)
+            {
+                //A small check, if the current goal is impossible to plan because of waste volume, reroll the target day
+                for (int i = 0; i < 9; i++)
+                {
+                    targetDay = week.GetWeek[target.Item1];
+                    targetRoute = targetDay.GetRoutes[target.Item2];
+                    currentLoad = targetRoute.TotalLoad();
+
+                    if (currentLoad + order.numberOfContainers * order.volumeOfOneContainer > MAXLOAD)
+                        target = SelectRandomRoute();
+                    else
+                    {
+                        targetRouteFound = true;
+                        break;
+                    }
+                }
+
+                //In case we have not found a potentially suitable route (garbage volume wise)
+                if (!targetRouteFound)
+                    return emptyTuple;
+            }
+
+
+            //Grab the total time of the target day
             foreach(Route route in targetDay.GetRoutes)
             {
                 targetDayTime += route.TotalTime();
             }
 
-            if (startRoute.GetRoute[orderIndex].frequency > 1)
-                return emptyTuple;
+            #region calculations
+            //How much time do the current routes take
+            currentTime = startRoute.TotalTime() + targetRoute.TotalTime();
+
+            //store the first bit of the newtime, which consists of the old route minus the order we are going to shift
+            if(orderIndex == 0)
+            {
+                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, startRoute.GetRoute[orderIndex].matrixId] - distanceMatrix.GetDistanceMatrix[order.matrixId, startRoute.GetRoute[orderIndex + 1].matrixId] - order.totalEmptyingTime;
+            }
+            else if(orderIndex == startRoute.GetRoute.Count - 1)
+            {
+                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex - 1].matrixId, order.matrixId] - distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID] - order.totalEmptyingTime;
+            }
             else
             {
-                //How much time do the current routes take
-                currentTime = startRoute.TotalTime() + targetRoute.TotalTime();
+                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex - 1].matrixId, order.matrixId] - distanceMatrix.GetDistanceMatrix[order.matrixId, startRoute.GetRoute[orderIndex + 1].matrixId] - order.totalEmptyingTime;
+            }
 
-                //store the first bit of the newtime, which consists of the old route minus the order we are going to shift
-                if(orderIndex == 0)
+            //Go over the entire route to find the best location for our order
+            for(int j = 0; j < targetRoute.GetRoute.Count + 1; j++)
+            {
+                //Get the right MatrixID's
+                if (j == 0) //if this is the first order, the previous was matrixid (otherwise you query location -1)
                 {
-                    newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, startRoute.GetRoute[orderIndex].matrixId] - distanceMatrix.GetDistanceMatrix[order.matrixId, startRoute.GetRoute[orderIndex + 1].matrixId] - order.totalEmptyingTime;
+                    previousOrderMatrixID = DEPOTMATRIXID;
+                    nextOrderMatrixID = targetRoute.GetRoute[j].matrixId;
                 }
-                else if(orderIndex == startRoute.GetRoute.Count - 1)
+                else if (j == targetRoute.GetRoute.Count) //likewise with the last order
                 {
-                    newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex - 1].matrixId, order.matrixId] - distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID] - order.totalEmptyingTime;
+                    previousOrderMatrixID = targetRoute.GetRoute[j - 1].matrixId;
+                    nextOrderMatrixID = DEPOTMATRIXID;
                 }
                 else
                 {
-                    newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex - 1].matrixId, order.matrixId] - distanceMatrix.GetDistanceMatrix[order.matrixId, startRoute.GetRoute[orderIndex + 1].matrixId] - order.totalEmptyingTime;
+                    previousOrderMatrixID = targetRoute.GetRoute[j - 1].matrixId;
+                    nextOrderMatrixID = targetRoute.GetRoute[j].matrixId;
                 }
 
-                //Go over the entire route to find the best location for our order
-                for(int j = 0; j < targetRoute.GetRoute.Count + 1; j++)
+                //newTime has the previous order to new order and new order to next order added to it, and the old previous to next is substracted
+                //so if we have a, b, and new, wit the old route as (a to b) we do (a to new) + (new to b) - (a to b)
+                targetRouteTimeDifference = distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, order.matrixId] + distanceMatrix.GetDistanceMatrix[order.matrixId, nextOrderMatrixID] - distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, nextOrderMatrixID] + order.totalEmptyingTime;
+                newTime += targetRouteTimeDifference;
+
+                if (targetDayTime + targetRouteTimeDifference > WORKINGDAY)
+                    continue;
+                else
                 {
-                    //Get the right MatrixID's
-                    if (j == 0) //if this is the first order, the previous was matrixid (otherwise you query location -1)
+                    //see if this is the best swap so far
+                    //curr - new. If new is better will be pos, if new is worse it will be neg. Bigger is better
+                    //new - curr. If new is better will be neg, if new is worse it will be pos. Smaller is better
+                    if(newTime - currentTime < bestShiftGain)
                     {
-                        previousOrderMatrixID = DEPOTMATRIXID;
-                        nextOrderMatrixID = targetRoute.GetRoute[j].matrixId;
-                    }
-                    else if (j == targetRoute.GetRoute.Count) //likewise with the last order
-                    {
-                        previousOrderMatrixID = targetRoute.GetRoute[j - 1].matrixId;
-                        nextOrderMatrixID = DEPOTMATRIXID;
-                    }
-                    else
-                    {
-                        previousOrderMatrixID = targetRoute.GetRoute[j - 1].matrixId;
-                        nextOrderMatrixID = targetRoute.GetRoute[j].matrixId;
-                    }
-
-                    //newTime has the previous order to new order and new order to next order added to it, and the old previous to next is substracted
-                    //so if we have a, b, and new, wit the old route as (a to b) we do (a to new) + (new to b) - (a to b)
-                    targetRouteTimeDifference = distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, order.matrixId] + distanceMatrix.GetDistanceMatrix[order.matrixId, nextOrderMatrixID] - distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, nextOrderMatrixID] + order.totalEmptyingTime;
-                    newTime += targetRouteTimeDifference;
-
-                    if (targetDayTime + targetRouteTimeDifference > WORKINGDAY)
-                        continue;
-                    else
-                    {
-                        //see if this is the best swap so far
-                        //curr - new. If new is better will be pos, if new is worse it will be neg. Bigger is better
-                        //new - curr. If new is better will be neg, if new is worse it will be pos. Smaller is better
-                        if(newTime - currentTime < bestShiftGain)
-                        {
-                            bestShiftGain = newTime - currentTime;
-                            bestShiftIndex = j;
-                        }
+                        bestShiftGain = newTime - currentTime;
+                        bestShiftIndex = j;
                     }
                 }
             }
-           
+            #endregion
 
             
             //End of the checks, see if we found a possible swap
@@ -334,11 +476,39 @@ namespace Grote_Opdracht
                 Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> shiftOrder = new Tuple<operation,bool,double,List<Tuple<int,int,int,Order>>>(operation.Shift, improvement, bestShiftGain, new List<Tuple<int,int,int,Order>>());
                 shiftOrder.Item4.Add(new Tuple<int, int, int, Order>(start.Item1, start.Item2, orderIndex, order));
                 shiftOrder.Item4.Add(new Tuple<int, int, int, Order>(target.Item1, target.Item2, bestShiftIndex, order));
+
+                if(secondSwapStart != null)
+                {
+                    shiftOrder.Item4.Add(secondSwapStart);
+                    shiftOrder.Item4.Add(secondSwapTarget);
+                }
                 
                 return shiftOrder;
             }
             else
                 return emptyTuple;
+        }
+
+        public Tuple<int, int, int> FindOccurence(int dayNumber, Order order)
+        {
+            int dayIndex = -1, routeIndex = -1, index = -1;
+
+            //That means we also have to shift the other occurence (*sigh*)
+            //Find the other occurence
+            for(int j = dayNumber * 2 - 2; j < dayNumber * 2; j++)
+            {
+                foreach(Route route in week.GetWeek[j].GetRoutes)
+                {
+                    if(route.GetRoute.Contains(order))
+                    {
+                        dayIndex = j;
+                        routeIndex = route.RouteID - 1;
+                        index = route.GetRoute.IndexOf(order);
+                    }
+                }
+            }
+
+            return new Tuple<int, int, int>(dayIndex, routeIndex, index);
         }
 
         public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> SwapOrder(int startDayNumber = -1, int targetDayNumber = -1, Order a = null, int routeNumber = -1, int indexInRoute = -1)
@@ -721,6 +891,45 @@ namespace Grote_Opdracht
                     //Shift to day B
                     routeB.GetRoute.Insert(bIndex, orderA);
                     dayB.UpdateRoutes();
+
+                    //Change the bit so future checks don't go boom
+                    if(orderA.frequency == 4 && dayA.DayNumber != dayB.DayNumber)
+                    {
+                        orderA.SetBit(dayA.DayNumber, false);
+                        orderA.SetBit(dayB.DayNumber, true);
+                    }
+                    else if(orderA.frequency == 2 && dayA.DayNumber != dayB.DayNumber)
+                    {
+                        orderA.SetBit(dayA.DayNumber, false);
+                        orderA.SetBit(dayB.DayNumber, true);
+                    }
+
+                    if(orderData.Count > 2)
+                    {
+                        //dayA is the day we have to remove from, dayB is the day we have to Add to
+                        dayA = week.GetWeek[orderData[2].Item1];
+                        dayB = week.GetWeek[orderData[3].Item1];
+
+                        routeA = dayA.GetRoutes[orderData[2].Item2];
+                        routeB = dayB.GetRoutes[orderData[3].Item2];
+
+                        aIndex = orderData[2].Item3;
+                        bIndex = orderData[3].Item3;
+
+                        orderA = orderData[2].Item4;
+
+                        //Remove from day A
+                        routeA.Remove(aIndex);
+                        dayA.UpdateRoutes();
+
+                        //Shift to day B
+                        routeB.GetRoute.Insert(bIndex, orderA);
+                        dayB.UpdateRoutes();
+
+                        //Change the bit so future checks don't go boom
+                        orderA.SetBit(dayA.DayNumber, false);
+                        orderA.SetBit(dayB.DayNumber, true);
+                    }
 
                     break;
             }
