@@ -231,8 +231,11 @@ namespace Grote_Opdracht
 
             Day startDay = week.GetWeek[start.Item1];
             Route startRoute = startDay.GetRoutes[start.Item2];
-            Day targetDay = null;
-            Route targetRoute = null;
+            Day targetDay = week.GetWeek[target.Item1];
+            if (targetDay.GetRoutes.Count == 0) //in case we would create new routes, this needs to change
+                return emptyTuple;
+            Route targetRoute = targetDay.GetRoutes[target.Item2];
+            currentLoad = targetRoute.TotalLoad();
 
             //Get a random order, this is what we'll shift
             int orderIndex = random.Next(startRoute.GetRoute.Count);
@@ -251,6 +254,8 @@ namespace Grote_Opdracht
 
                 target = SelectRandomRoute(targetDayNumber);
                 targetDay = week.GetWeek[target.Item1];
+                if (targetDay.GetRoutes.Count == 0) //in case we would create new routes, this needs to change
+                    return emptyTuple;
                 targetRoute = targetDay.GetRoutes[target.Item2];
                 currentLoad = targetRoute.TotalLoad();
 
@@ -331,6 +336,8 @@ namespace Grote_Opdracht
                                 target = SelectRandomRoute(random.Next(startDay.DayNumber * 2 - 2, startDay.DayNumber * 2));//Go with the current day
 
                             targetDay = week.GetWeek[target.Item1];
+                            if (targetDay.GetRoutes.Count == 0) //in case we would create new routes, this needs to change
+                                return emptyTuple;
                             targetRoute = targetDay.GetRoutes[target.Item2];
                             currentLoad = targetRoute.TotalLoad();
                         }
@@ -344,6 +351,8 @@ namespace Grote_Opdracht
                             target = SelectRandomRoute(dayIndex);
 
                             targetDay = week.GetWeek[dayIndex];
+                            if (targetDay.GetRoutes.Count == 0) //in case we would create new routes, this needs to change
+                                return emptyTuple;
                             targetRoute = targetDay.GetRoutes[target.Item2];
                             currentLoad = targetRoute.TotalLoad();
                         }
@@ -365,6 +374,8 @@ namespace Grote_Opdracht
                                 target = SelectRandomRoute(random.Next(startDay.DayNumber * 2 - 2, startDay.DayNumber * 2));//Go with the current day
 
                             targetDay = week.GetWeek[target.Item1];
+                            if (targetDay.GetRoutes.Count == 0) //in case we would create new routes, this needs to change
+                                return emptyTuple;
                             targetRoute = targetDay.GetRoutes[target.Item2];
                             currentLoad = targetRoute.TotalLoad();
 
@@ -381,12 +392,15 @@ namespace Grote_Opdracht
                 //A small check, if the current goal is impossible to plan because of waste volume, reroll the target day
                 for (int i = 0; i < 9; i++)
                 {
-                    targetDay = week.GetWeek[target.Item1];
-                    targetRoute = targetDay.GetRoutes[target.Item2];
-                    currentLoad = targetRoute.TotalLoad();
-
                     if (currentLoad + order.numberOfContainers * order.volumeOfOneContainer > MAXLOAD)
+                    {
                         target = SelectRandomRoute();
+                        targetDay = week.GetWeek[target.Item1];
+                        if (targetDay.GetRoutes.Count == 0) //in case we would create new routes, this needs to change
+                            return emptyTuple;
+                        targetRoute = targetDay.GetRoutes[target.Item2];
+                        currentLoad = targetRoute.TotalLoad();
+                    }
                     else
                     {
                         targetRouteFound = true;

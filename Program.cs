@@ -38,7 +38,7 @@ namespace Grote_Opdracht
 
                 while (!operationPerformed && attemptCounter < MaximumAttempts)
                 {
-                    randomOperationChoice = random.Next(100);
+                    //randomOperationChoice = random.Next(100);
 
                     LS.ShiftOrder();
                     operationPerformed = true;
