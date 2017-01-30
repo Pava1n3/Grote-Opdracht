@@ -29,7 +29,7 @@ namespace Grote_Opdracht
             Random random = new Random();
             int randomOperationChoice = -1, MaximumAttempts = 8, attemptCounter = 0;
             bool operationPerformed = false;
-            double controlParameter = 6;
+            double controlParameter = 260;
             Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Null, false, 0, null); //int/enum (swap,ins, del), bool improvement, double difference in time, day, route, index, order, || day2, route2, index2, order2. For high freq orders? LIST
 
             for (int x = 0; x < 10000; x++)
@@ -104,9 +104,10 @@ namespace Grote_Opdracht
                     LS.DoOperation(outcome.Item1, outcome.Item4);
 
                 //Console.WriteLine("Attempt: {0} finished after {1} tries", x, attemptCounter);
-
-                controlParameter *= 0.999;
-
+                if (int x = 1000 || 2000 || 3000 || 4000 || 5000 || 6000 || 7000 || 8000 || 9000)
+                {
+                controlParameter *= 0.99;
+                }
                 attemptCounter = 0;
                 operationPerformed = false;
             }
