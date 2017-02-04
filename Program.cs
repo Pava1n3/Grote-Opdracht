@@ -27,89 +27,19 @@ namespace Grote_Opdracht
 
             //Do Local Search
             Random random = new Random();
-            int randomOperationChoice = -1, MaximumAttempts = 8, attemptCounter = 0;
-            bool operationPerformed = false;
+
             double controlParameter = 260;
             Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Null, false, 0, null); //int/enum (swap,ins, del), bool improvement, double difference in time, day, route, index, order, || day2, route2, index2, order2. For high freq orders? LIST
 
             for (int x = 0; x < 10000; x++)
             {
-                //Console.WriteLine("============ Attempt: {0} started ===========", x);
-
-                while (!operationPerformed && attemptCounter < MaximumAttempts)
-                {
-                    //randomOperationChoice = random.Next(100);
-
-                    LS.ShiftOrder();
-                    operationPerformed = true;
-
-                    //if(randomOperationChoice > 50)
-                    //{
-                    //    outcome = LS.Deletion();
-                    //    if (outcome.Item1 != operation.Null)
-                    //    {
-                    //        operationPerformed = true;
-                    //    }
-                    //}
-                    //else
-                    //{
-                    //    int y = 0;
-                    //    while (!operationPerformed && y < 8)
-                    //    {
-                    //        outcome = LS.AddOrder();
-                    //        if (outcome.Item1 != operation.Null)
-                    //            operationPerformed = true;
-                    //        y++;
-                    //    }
-                    //}
-
-                    //ifs to determine chances
-                    //if(randomOperationChoice > 90)
-                    //{
-                    //    for (int y = 0; y < 2; y++)
-                    //        if (!operationPerformed)
-                    //            operationPerformed = LS.SwapLocalOrders();
-                    //}
-                    //if(randomOperationChoice >= 80 + oM.GetOrderMatrix.Count / 2 && oM.GetOrderMatrix.Count < 30)
-                    //{
-                    //    outcome = LS.Deletion();
-                    //    if (outcome.Item1 != operation.Null)
-                    //    {
-                    //        //neighbours.Add(outcome);
-                    //        operationPerformed = true;
-                    //    }
-                    //}
-                    //else if (randomOperationChoice < 50 + oM.GetOrderMatrix.Count && oM.GetOrderMatrix.Count > 0)
-                    //{
-                    //    int y = 0;
-                    //    while (!operationPerformed && y < 8)
-                    //    {
-                    //        outcome = LS.AddOrder();
-                    //        if (outcome.Item1 != operation.Null)
-                    //            operationPerformed = true;
-                    //        y++;
-                    //    }
-                    //}
-                    //else if(randomOperationChoice > 50)
-                    //{
-                    //    outcome = LS.SwapOrder();
-                    //    if(outcome.Item1 != operation.Null)
-                    //        operationPerformed = true;
-                    //}                    
-
-                    attemptCounter++;
-                }
-
-                if (operationPerformed)
-                    LS.DoOperation(outcome.Item1, outcome.Item4);
+                
 
                 //Console.WriteLine("Attempt: {0} finished after {1} tries", x, attemptCounter);
-                if (int x = 1000 || 2000 || 3000 || 4000 || 5000 || 6000 || 7000 || 8000 || 9000)
+                if (x % 1000 == 0)
                 {
                 controlParameter *= 0.99;
                 }
-                attemptCounter = 0;
-                operationPerformed = false;
             }
 
             StreamWriter sw = new StreamWriter(@"..\..\Solution.txt");
@@ -119,10 +49,5 @@ namespace Grote_Opdracht
 
             Console.ReadKey();
         }
-
-        //public operation operation
-        //{
-        //    get { return Grote_Opdracht.operation.Add; }
-        //}
     }
 }
