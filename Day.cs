@@ -157,6 +157,25 @@ namespace Grote_Opdracht
             get { return routes; }
         }
 
+        public double Costs()
+        {
+            double costs = 0;
+
+            foreach (Route route in routes)
+                costs += route.TotalTime();
+
+            return costs;
+        }
+
+        public void DeleteEmptyRoutes()
+        {
+            foreach (Route route in routes)
+            {
+                if (route.GetRoute.Count == 0)
+                    routes.Remove(route);
+            }
+        }
+
         public void PrintOutput(StreamWriter sw)
         {
             int sequence = 1;

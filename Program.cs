@@ -34,13 +34,6 @@ namespace Grote_Opdracht
             int iterationBlock = 64;
             int checker = 0;
 
-            //int randomOperationChoice = -1, MaximumAttempts = 8, attemptCounter = 0;
-            //bool operationPerformed = false;
-            //double controlParameter = 260;
-
-            //int/enum (swap,ins, del), bool improvement, double difference in time, day, route, index, order, || day2, route2, index2, order2. For high freq orders? LIST
-            Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Null, false, 0, null);
-
             for (int x = 1; x <= 10000; x++)
             {
                 // Every 4 * #interationBlock iterations, reset the counter.
@@ -61,11 +54,11 @@ namespace Grote_Opdracht
                     ctrlPM *= 0.99f;
                 }
 
-                outcome = LS.RandomOperation(1, 0, ctrlPM);
-                if (!outcome.Item2)
+                bool op = LS.RandomOperation(0.3, 0.3, ctrlPM);
+
+                if (!op)
                     badResultCounter++;
 
-                LS.DoOperation(outcome.Item1, outcome.Item4);
                 checker = x;
             }
 
@@ -74,6 +67,16 @@ namespace Grote_Opdracht
             weekSchedule.PrintOutput(sw);
             sw.Flush();
             Console.WriteLine("Number of Iterations: {0}", checker);
+
+            double costs = 0;
+            double decline = 0;
+            costs += weekSchedule.Costs();
+            foreach (KeyValuePair<int, Order> order in oM.GetOrderMatrix)
+                decline += 3 * order.Value.totalEmptyingTime;
+            Console.WriteLine("Total Costs: {0}", costs + decline);
+            Console.WriteLine("Total Declines: {0}", decline);
+            Console.WriteLine("Total Schedule: {0}", costs);
+
 
             Console.ReadKey();
         }

@@ -31,6 +31,89 @@ namespace Grote_Opdracht
             this.distanceMatrix = distanceMatrix;
         }
 
+        public bool Delete(double ctrlPM)
+        {
+            int numberTries = 5;
+            int possibility = 0;
+            Tuple<int, int> rndRoute = SelectRandomRoute();
+            Route route = week.GetWeek[rndRoute.Item1].GetRoutes[rndRoute.Item2];
+            double best = double.MaxValue;
+            double oTotalTime = route.TotalTime();
+
+            if (route.GetRoute.Count == 0)
+                return true;
+
+            for (int x = 0; x < numberTries; x++)
+            {
+                int rnd = random.Next(route.GetRoute.Count);
+                Order temp = route.GetRoute[rnd];
+                // If an order has a higher frequency than 1, skip the iteration.
+                if (temp.frequency > 1)
+                    continue;
+
+                // Remove the chosen order from the route.
+                route.GetRoute.RemoveAt(rnd);
+                // Calculate the new time + penalty.
+                double nTotalTime = route.TotalTime();
+                double time = nTotalTime + temp.totalEmptyingTime * 3;
+                // If the deletion is less costly than the other deletions, save it.
+                if (time < best)
+                {
+                    best = time;
+                    possibility = rnd;
+                }
+                // Reinsert the order in the Route.
+                route.GetRoute.Insert(rnd, temp);
+                // When on the last iteration...
+                if (x == numberTries - 1)
+                {
+                    // Do the best possible deletion.
+                    Order order = route.GetRoute[possibility];
+                    route.GetRoute.RemoveAt(possibility);
+                    double pTotalTime = oTotalTime - best;
+                    bool accept = false;
+
+                    // If the deletion gives us a time increase...
+                    if (pTotalTime < 0)
+                        // Check if we will accept it.
+                        accept = AcceptOperation(ctrlPM, pTotalTime);
+                    // If we won't, reinsert the order in the route.
+                    if (!accept)
+                        route.GetRoute.Insert(possibility, order);
+                    // If we will, add the order to the orderMatrix and Update the whole Day.
+                    else
+                    {
+                        orderMatrix.GetOrderMatrix.Add(order.orderId, order);
+                        week.GetWeek[rndRoute.Item1].UpdateRoutes();
+                        return false;
+                    }                       
+                }
+            }
+            return true;
+        }
+
+        public bool Add(double ctrlPM)
+        {
+            int numberTries = 5;
+            int possibility = 0;
+            int[] keys = orderMatrix.GetOrderMatrix.Keys.ToArray();
+            int key = keys[random.Next(keys.Length)];
+            Order order = orderMatrix.GetOrderMatrix[key];
+
+            double best = double.MaxValue;
+
+            for (int x = 0; x < week.GetWeek.Count; x++)
+                for(int y = 0; y < week.GetWeek[x].GetRoutes.Count; y++)
+                    for(int z = 0; z < week.GetWeek[x].GetRoutes[y].GetRoute.Count; z++)
+                    {
+                        week.GetWeek[x].GetRoutes[y].GetRoute.Insert(z, order);
+                    }
+
+            return true;
+        }
+
+
+
         /// <summary>
         /// Finds the least costly delete on a random day and a random route
         /// </summary>
@@ -1017,6 +1100,16 @@ namespace Grote_Opdracht
             return tuple;
         }
 
+        public bool AcceptOperation(double ctrlPM, double timeIncrease)
+        {
+            double rnd = random.NextDouble();
+            double e = Math.Exp(timeIncrease / ctrlPM);
+
+            if (rnd <= e)
+                return true;
+            else
+                return false;
+        }
 
         /// <summary>
         /// Chooses a random operation from the 4 existing operations based on the given weighted values.
@@ -1024,23 +1117,17 @@ namespace Grote_Opdracht
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <param name="c"></param>
-        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> RandomOperation(double a, double b, double ctrlPM)
+        public bool RandomOperation(double a, double b, double ctrlPM)
         {
             double rnd = random.NextDouble();
-            Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> output = emptyTuple;
+            bool output = true;
 
             if (rnd <= a)
-                output = ShiftOrder();
+                output = Delete(ctrlPM);
             else if (rnd <= a + b)
-                output = Deletion();
+                output = Delete(ctrlPM);
             else
-                output = ShiftOrder();
-
-            if (output.Item1 == operation.Null)
-                RandomOperation(a, b, ctrlPM);
-
-            if (!output.Item2 && random.NextDouble() > Math.Exp(output.Item3 / ctrlPM))
-                RandomOperation(a, b, ctrlPM);
+                output = Delete(ctrlPM);
 
             return output;
         }

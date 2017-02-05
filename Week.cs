@@ -45,5 +45,23 @@ namespace Grote_Opdracht
                 day.PrintOutput(sw);
             }
         }
+
+        public double Costs()
+        {
+            double costs = 0;
+
+            foreach (Day day in week)
+                costs += day.Costs();
+
+            return costs;    
+        }
+
+        public void RemoveEmptyRoutes()
+        {
+            foreach (Day day in week)
+            {
+                day.DeleteEmptyRoutes();
+            }
+        }
     }
 }
