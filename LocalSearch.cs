@@ -238,6 +238,16 @@ namespace Grote_Opdracht
 
             Day startDay = week.GetWeek[start.Item1];
             Route startRoute = startDay.GetRoutes[start.Item2];
+
+            int counter = 0;
+            while (startRoute.GetRoute.Count == 0 && counter < 20)
+            {
+                start = SelectRandomRoute();
+                startDay = week.GetWeek[start.Item1];
+                startRoute = startDay.GetRoutes[start.Item2];
+                counter++;
+            }
+
             Day targetDay = week.GetWeek[target.Item1];
             if (targetDay.GetRoutes.Count == 0) //in case we would create new routes, this needs to change
                 return emptyTuple;
@@ -454,7 +464,7 @@ namespace Grote_Opdracht
             }
 
             //Go over the entire route to find the best location for our order
-            for (int j = 0; j <= targetRoute.GetRoute.Count + 1; j++)
+            for (int j = 0; j <= targetRoute.GetRoute.Count; j++)
             {
                 //Get the right MatrixID's
                 if (targetRoute.GetRoute.Count == 0)
@@ -481,7 +491,8 @@ namespace Grote_Opdracht
                 if (targetRoute.GetRoute.Count == 0)
                 {
                     targetRouteTimeDifference = distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, order.matrixId]
-                                                + order.totalEmptyingTime;
+                                                + order.totalEmptyingTime
+                                                + distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID];
                 }
                 else
                 {
@@ -1017,10 +1028,9 @@ namespace Grote_Opdracht
         {
             double rnd = random.NextDouble();
             Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> output = emptyTuple;
-            string sOp;
 
             if (rnd <= a)
-                output = AddOrder();
+                output = ShiftOrder();
             else if (rnd <= a + b)
                 output = Deletion();
             else

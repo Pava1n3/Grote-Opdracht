@@ -41,7 +41,7 @@ namespace Grote_Opdracht
             //int/enum (swap,ins, del), bool improvement, double difference in time, day, route, index, order, || day2, route2, index2, order2. For high freq orders? LIST
             Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> outcome = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Null, false, 0, null);
 
-            for (int x = 1; x <= 1000000; x++)
+            for (int x = 1; x <= 10000; x++)
             {
                 // Every 4 * #interationBlock iterations, reset the counter.
                 if (x % (4 * iterationBlock) == 0)
@@ -61,7 +61,7 @@ namespace Grote_Opdracht
                     ctrlPM *= 0.99f;
                 }
 
-                outcome = LS.RandomOperation(0.1, 0.3, ctrlPM);
+                outcome = LS.RandomOperation(1, 0, ctrlPM);
                 if (!outcome.Item2)
                     badResultCounter++;
 
@@ -73,7 +73,6 @@ namespace Grote_Opdracht
             weekSchedule.PrintCosts();
             weekSchedule.PrintOutput(sw);
             sw.Flush();
-
             Console.WriteLine("Number of Iterations: {0}", checker);
 
             Console.ReadKey();
