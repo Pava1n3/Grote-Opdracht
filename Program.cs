@@ -27,6 +27,7 @@ namespace Grote_Opdracht
 
             // Do Local Search
             Random random = new Random();
+
             double ctrlPM = 260;
             double breakPoint = 1.5;
             int badResultCounter = 0;

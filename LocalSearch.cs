@@ -152,13 +152,20 @@ namespace Grote_Opdracht
 
                     for (int y = 0; y <= route.GetRoute.Count; y++)
                     {
-                        if (y == 0)
+                        if(route.GetRoute.Count == 0)
+                        {
+                            newTime = totalTime + distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, order.matrixId]
+                                                + order.totalEmptyingTime;
+                        }
+                        else if (y == 0)
                         {
                             newTime = totalTime - distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, route.GetRoute[y].matrixId]
                                 //- distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, route.GetRoute[y + 1].matrixId]
                                                 + distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, order.matrixId]
                                                 + distanceMatrix.GetDistanceMatrix[order.matrixId, route.GetRoute[y].matrixId]
                                                 + order.totalEmptyingTime;
+                            //if(route.GetRoute.Count > 1)
+                            //    newTime -= distanceMatrix.GetDistanceMatrix[route.GetRoute[y].matrixId, route.GetRoute[y + 1].matrixId];
                         }
                         else if (y == route.GetRoute.Count) //If we're at the last entry, the next stop is the depot and we need to do things in a slightly different way
                         {
@@ -183,7 +190,7 @@ namespace Grote_Opdracht
                         newLoad = route.TotalLoad() + order.volumeOfOneContainer * order.numberOfContainers / 5;
 
                         //Positive if new is better, neg if it is worse
-                        timeGain = totalTime - newTime + 3 * order.totalEmptyingTime;
+                        timeGain = totalTime - newTime - 3 * order.totalEmptyingTime;
 
                         //Check if the new route is feasible
                         if (newLoad < MAXLOAD && day.CheckNewRoutes(route.RouteID, newTime) && timeGain > currentBest)
@@ -425,28 +432,37 @@ namespace Grote_Opdracht
             currentTime = startRoute.TotalTime() + targetRoute.TotalTime();
 
             //store the first bit of the newtime, which consists of the old route minus the order we are going to shift
-            if(orderIndex == 0)
+            if (orderIndex == 0)
             {
-                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, startRoute.GetRoute[orderIndex].matrixId] - order.totalEmptyingTime;
-                if (startRoute.GetRoute.Count == 1)
-                    newTime -= distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex].matrixId, DEPOTMATRIXID];
-                else
+                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, startRoute.GetRoute[orderIndex].matrixId]
+                                                 - order.totalEmptyingTime;
+
+                if (startRoute.GetRoute.Count > 1)
                     newTime -= distanceMatrix.GetDistanceMatrix[order.matrixId, startRoute.GetRoute[orderIndex + 1].matrixId];
             }
-            else if(orderIndex == startRoute.GetRoute.Count - 1)
+            else if (orderIndex == startRoute.GetRoute.Count - 1)
             {
-                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex - 1].matrixId, order.matrixId] - distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID] - order.totalEmptyingTime;
+                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex - 1].matrixId, order.matrixId]
+                                                 - distanceMatrix.GetDistanceMatrix[order.matrixId, DEPOTMATRIXID]
+                                                 - order.totalEmptyingTime;
             }
             else
             {
-                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex - 1].matrixId, order.matrixId] - distanceMatrix.GetDistanceMatrix[order.matrixId, startRoute.GetRoute[orderIndex + 1].matrixId] - order.totalEmptyingTime;
+                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex - 1].matrixId, order.matrixId]
+                                                 - distanceMatrix.GetDistanceMatrix[order.matrixId, startRoute.GetRoute[orderIndex + 1].matrixId]
+                                                 - order.totalEmptyingTime;
             }
 
             //Go over the entire route to find the best location for our order
-            for(int j = 0; j < targetRoute.GetRoute.Count + 1; j++)
+            for (int j = 0; j <= targetRoute.GetRoute.Count + 1; j++)
             {
                 //Get the right MatrixID's
-                if (j == 0) //if this is the first order, the previous was matrixid (otherwise you query location -1)
+                if (targetRoute.GetRoute.Count == 0)
+                {
+                    previousOrderMatrixID = DEPOTMATRIXID;
+                    nextOrderMatrixID = -1;
+                }
+                else if (j == 0) //if this is the first order, the previous was matrixid (otherwise you query location -1)
                 {
                     previousOrderMatrixID = DEPOTMATRIXID;
                     nextOrderMatrixID = targetRoute.GetRoute[j].matrixId;
@@ -462,9 +478,21 @@ namespace Grote_Opdracht
                     nextOrderMatrixID = targetRoute.GetRoute[j].matrixId;
                 }
 
-                //newTime has the previous order to new order and new order to next order added to it, and the old previous to next is substracted
-                //so if we have a, b, and new, wit the old route as (a to b) we do (a to new) + (new to b) - (a to b)
-                targetRouteTimeDifference = distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, order.matrixId] + distanceMatrix.GetDistanceMatrix[order.matrixId, nextOrderMatrixID] - distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, nextOrderMatrixID] + order.totalEmptyingTime;
+                if (targetRoute.GetRoute.Count == 0)
+                {
+                    targetRouteTimeDifference = distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, order.matrixId]
+                                                + order.totalEmptyingTime;
+                }
+                else
+                {
+                    //newTime has the previous order to new order and new order to next order added to it, and the old previous to next is substracted
+                    //so if we have a, b, and new, wit the old route as (a to b) we do (a to new) + (new to b) - (a to b)
+                    targetRouteTimeDifference = distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, order.matrixId]
+                                                + distanceMatrix.GetDistanceMatrix[order.matrixId, nextOrderMatrixID]
+                                                - distanceMatrix.GetDistanceMatrix[previousOrderMatrixID, nextOrderMatrixID]
+                                                + order.totalEmptyingTime;
+                }
+
                 newTime += targetRouteTimeDifference;
 
                 if (targetDayTime + targetRouteTimeDifference > WORKINGDAY)
@@ -474,7 +502,7 @@ namespace Grote_Opdracht
                     //see if this is the best swap so far
                     //curr - new. If new is better will be pos, if new is worse it will be neg. Bigger is better
                     //new - curr. If new is better will be neg, if new is worse it will be pos. Smaller is better
-                    if(newTime - currentTime < bestShiftGain)
+                    if (newTime - currentTime < bestShiftGain)
                     {
                         bestShiftGain = newTime - currentTime;
                         bestShiftIndex = j;
@@ -483,7 +511,7 @@ namespace Grote_Opdracht
             }
             #endregion
 
-            
+
             //End of the checks, see if we found a possible swap
             if (bestShiftIndex != -1)
             {
