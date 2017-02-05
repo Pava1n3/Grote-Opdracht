@@ -9,13 +9,13 @@ namespace Grote_Opdracht
 {
     class LocalSearch
     {
-        //Constants
+        // Constants
         private const int HALFFIVE = 41400;
         private const int DEPOTMATRIXID = 287;
         private const int DUMPLOAD = 1800;
         private const int MAXLOAD = 20000;
         private int WORKINGDAY = 43200;
-        //enum operation { Add, Swap, Delete, Null };
+        // enum operation { Add, Swap, Delete, Null };
         Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> emptyTuple = new Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>>(operation.Null, false, 0, null);
 
         // Objects
@@ -94,20 +94,43 @@ namespace Grote_Opdracht
 
         public bool Add(double ctrlPM)
         {
-            int numberTries = 5;
-            int possibility = 0;
+            Tuple<int, int, int> possibility;
             int[] keys = orderMatrix.GetOrderMatrix.Keys.ToArray();
             int key = keys[random.Next(keys.Length)];
             Order order = orderMatrix.GetOrderMatrix[key];
 
             double best = double.MaxValue;
 
+            // Check in what place we can actually add the order, starting...
+            // For every day in week...
             for (int x = 0; x < week.GetWeek.Count; x++)
-                for(int y = 0; y < week.GetWeek[x].GetRoutes.Count; y++)
-                    for(int z = 0; z < week.GetWeek[x].GetRoutes[y].GetRoute.Count; z++)
+            {// For every route in day...
+                for (int y = 0; y < week.GetWeek[x].GetRoutes.Count; y++)
+                    // For every order in route...
+                    for (int z = 0; z < week.GetWeek[x].GetRoutes[y].GetRoute.Count; z++)
                     {
+                        // Insert the order on the 'z' index.
                         week.GetWeek[x].GetRoutes[y].GetRoute.Insert(z, order);
+                        // Update everything
+                        week.GetWeek[x].UpdateRoutes();
+                        // Check if the solution for the whole day is still feasible.
+                        if (!(WORKINGDAY < week.GetWeek[x].Costs()))
+                        {
+                            // If it is, calculate the newTime for the route with the added order.
+                            double newTime = week.GetWeek[x].GetRoutes[y].TotalTime();
+                            // If the time is better than previous tested additions or if it is the first iteration...
+                            if (newTime < best)
+                            {
+                                // Update the values.
+                                best = newTime;
+                                possibility = new Tuple<int, int, int>(x, y, z);
+                            }
+
+                        }
+                        week.GetWeek[x].GetRoutes[y].GetRoute.RemoveAt(z);
                     }
+
+            }
 
             return true;
         }
@@ -1112,23 +1135,34 @@ namespace Grote_Opdracht
         }
 
         /// <summary>
-        /// Chooses a random operation from the 4 existing operations based on the given weighted values.
+        /// Chooses a random operation from the 3 existing operations based on the given weighted values.
         /// </summary>
-        /// <param name="a"></param>
-        /// <param name="b"></param>
-        /// <param name="c"></param>
+        /// <param name="a">Weight for Delete</param>
+        /// <param name="b">Weight for Add</param>
+        /// <param name="ctrlPM">Control Parameter</param>
         public bool RandomOperation(double a, double b, double ctrlPM)
         {
+            // Roll a random number.
             double rnd = random.NextDouble();
+            // Set the output boolean to true (normal operation)
             bool output = true;
 
+            // If the number rolls to a value below/equal to the a parameter...
             if (rnd <= a)
+                // Do a delete.
                 output = Delete(ctrlPM);
+            // If it rolls higher than a or equal/below b...
             else if (rnd <= a + b)
-                output = Delete(ctrlPM);
+                // Check if the orderMatrix if empty.
+                if (orderMatrix.GetOrderMatrix.Count != 0)
+                    // If it isn't, do an Add.
+                    output = Add(ctrlPM);
+            // If it rolls higher than b.
             else
+                // Do a swap.
                 output = Delete(ctrlPM);
 
+            // Return the boolean value that represents the type of operation (normal/accepted)
             return output;
         }
     }
