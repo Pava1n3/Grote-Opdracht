@@ -92,6 +92,106 @@ namespace Grote_Opdracht
             return true;
         }
 
+        public bool Shift(double ctrlPM)
+        {
+            int rndStartIndex;
+            Tuple<int, int> rndStart, rndTarget;
+            rndStart = SelectRandomRoute();
+            rndTarget = SelectRandomRoute();
+
+            //Get a random start and target route. 
+            Day tarDay = week.GetWeek[rndTarget.Item1];
+            Day startDay = week.GetWeek[rndStart.Item1];
+            Route startRoute = startDay.GetRoutes[rndStart.Item2];
+            Route tarRoute = tarDay.GetRoutes[rndTarget.Item2];
+            if (tarRoute.GetRoute.Count == 0 || startRoute.GetRoute.Count == 0)
+                return true;
+
+            //Choose a random order from the startroute
+            rndStartIndex = random.Next(startRoute.GetRoute.Count);
+            Order order = startRoute.GetRoute[rndStartIndex];
+            if (order.frequency > 1)
+                return true;
+
+            //Original time of target route; original time of target day (to be calculated); new time of rout (tbc); value of best improvement
+            double oTime = tarRoute.TotalTime(), oDayTime = 0, nTime = 0, best = double.MaxValue;
+            int bestPos = -1, totalLoad = tarRoute.TotalLoad();
+
+            //Calc total time of the target day
+            foreach(Route r in tarDay.GetRoutes)
+            {
+                oDayTime += r.TotalTime();
+            }
+
+            //Calculate the time difference of removing the route from the starting route
+            double sTime, nSTime, timeDiff;
+            sTime = startRoute.TotalTime();
+            startRoute.Remove(rndStartIndex);
+            nSTime = startRoute.TotalTime();
+            timeDiff = sTime - nSTime;
+
+            //Go over the target route, figure out the best location to shift to
+            for (int i = 0; i < tarRoute.GetRoute.Count; i++ )
+            {
+                tarRoute.GetRoute.Insert(i, order);
+                nTime = tarRoute.TotalTime();
+
+                //Check if it's valid (time and load wise) and whether it's better
+                if(oDayTime + nTime - oTime < WORKINGDAY && totalLoad + order.numberOfContainers * order.volumeOfOneContainer < MAXLOAD && nTime < best)
+                {
+                    bestPos = i;
+                    best = nTime;
+                }
+
+                tarRoute.Remove(i);
+            }
+
+            bool accept = false;
+            if (bestPos != -1)
+            {
+                //Check wether it is a net gain in time or not
+                //TimeDiff is positive, because this much time is gained from the removal
+                //best - oTime, the increase in route time
+                //The total thing should be increase in new route measured against decrease in the other
+                if (best - oTime - timeDiff < 0)
+                {
+                    //In case of this occuring, the shift was a net gain (more went out of the old route then came into the new route)
+                    tarRoute.GetRoute.Insert(bestPos, order);
+
+                    //Update Routes
+                    tarDay.UpdateRoutes();
+                    startDay.UpdateRoutes();
+                    return false;
+                }
+                else
+                {
+                    accept = AcceptOperation(ctrlPM, best - oTime - timeDiff);
+
+                    if (accept)
+                    {
+                        tarRoute.GetRoute.Insert(bestPos, order);
+
+                        //Update Routes
+                        tarDay.UpdateRoutes();
+                        startDay.UpdateRoutes();
+                        return false;
+                    }
+                    else
+                    {
+                        startRoute.GetRoute.Insert(rndStartIndex, order);
+                        startDay.UpdateRoutes();
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                startRoute.GetRoute.Insert(rndStartIndex, order);
+
+                return true;
+            }
+        }
+
         public bool Add(double ctrlPM)
         {
             int numberTries = 5;
@@ -1123,11 +1223,11 @@ namespace Grote_Opdracht
             bool output = true;
 
             if (rnd <= a)
-                output = Delete(ctrlPM);
+                output = Shift(ctrlPM);
             else if (rnd <= a + b)
-                output = Delete(ctrlPM);
+                output = Shift(ctrlPM);
             else
-                output = Delete(ctrlPM);
+                output = Shift(ctrlPM);
 
             return output;
         }

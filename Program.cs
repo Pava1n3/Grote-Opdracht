@@ -54,7 +54,7 @@ namespace Grote_Opdracht
                     ctrlPM *= 0.99f;
                 }
 
-                bool op = LS.RandomOperation(0.3, 0.3, ctrlPM);
+                bool op = LS.RandomOperation(1, 0.3, ctrlPM);
 
                 if (!op)
                     badResultCounter++;
