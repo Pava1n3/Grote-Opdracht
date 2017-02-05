@@ -427,7 +427,11 @@ namespace Grote_Opdracht
             //store the first bit of the newtime, which consists of the old route minus the order we are going to shift
             if(orderIndex == 0)
             {
-                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, startRoute.GetRoute[orderIndex].matrixId] - distanceMatrix.GetDistanceMatrix[order.matrixId, startRoute.GetRoute[orderIndex + 1].matrixId] - order.totalEmptyingTime;
+                newTime = startRoute.TotalTime() - distanceMatrix.GetDistanceMatrix[DEPOTMATRIXID, startRoute.GetRoute[orderIndex].matrixId] - order.totalEmptyingTime;
+                if (startRoute.GetRoute.Count == 1)
+                    newTime -= distanceMatrix.GetDistanceMatrix[startRoute.GetRoute[orderIndex].matrixId, DEPOTMATRIXID];
+                else
+                    newTime -= distanceMatrix.GetDistanceMatrix[order.matrixId, startRoute.GetRoute[orderIndex + 1].matrixId];
             }
             else if(orderIndex == startRoute.GetRoute.Count - 1)
             {
@@ -487,7 +491,7 @@ namespace Grote_Opdracht
                 if (bestShiftGain <= 0)
                     improvement = true;
 
-                Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> shiftOrder = new Tuple<operation,bool,double,List<Tuple<int,int,int,Order>>>(operation.Shift, improvement, bestShiftGain, new List<Tuple<int,int,int,Order>>());
+                Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> shiftOrder = new Tuple<operation,bool,double,List<Tuple<int,int,int,Order>>>(operation.Shift, improvement, -bestShiftGain, new List<Tuple<int,int,int,Order>>());
                 shiftOrder.Item4.Add(new Tuple<int, int, int, Order>(start.Item1, start.Item2, orderIndex, order));
                 shiftOrder.Item4.Add(new Tuple<int, int, int, Order>(target.Item1, target.Item2, bestShiftIndex, order));
 
@@ -972,6 +976,35 @@ namespace Grote_Opdracht
 
             // Return the tuple.
             return tuple;
+        }
+
+
+        /// <summary>
+        /// Chooses a random operation from the 4 existing operations based on the given weighted values.
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <param name="c"></param>
+        public Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> RandomOperation(double a, double b, double ctrlPM)
+        {
+            double rnd = random.NextDouble();
+            Tuple<operation, bool, double, List<Tuple<int, int, int, Order>>> output = emptyTuple;
+            string sOp;
+
+            if (rnd <= a)
+                output = AddOrder();
+            else if (rnd <= a + b)
+                output = Deletion();
+            else
+                output = ShiftOrder();
+
+            if (output.Item1 == operation.Null)
+                RandomOperation(a, b, ctrlPM);
+
+            if (!output.Item2 && random.NextDouble() > Math.Exp(output.Item3 / ctrlPM))
+                RandomOperation(a, b, ctrlPM);
+
+            return output;
         }
     }
 }
