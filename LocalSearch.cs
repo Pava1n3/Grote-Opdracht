@@ -226,7 +226,7 @@ namespace Grote_Opdracht
                 //TimeDiff is positive, because this much time is gained from the removal
                 //best - oTime, the increase in route time
                 //The total thing should be increase in new route measured against decrease in the other
-                if (best - oTime - timeDiff < 0)
+                if (timeDiff - (best - oTime) > 0)
                 {
                     //In case of this occuring, the shift was a net gain (more went out of the old route then came into the new route)
                     tarRoute.GetRoute.Insert(bestPos, order);
@@ -245,7 +245,7 @@ namespace Grote_Opdracht
                 }
                 else //Order is not an improvement
                 {
-                    accept = AcceptOperation(ctrlPM, best - oTime - timeDiff);
+                    accept = AcceptOperation(ctrlPM, timeDiff - (best - oTime));
 
                     if (accept)
                     {
@@ -1526,19 +1526,19 @@ namespace Grote_Opdracht
             bool output = true;
 
             // If the number rolls to a value below/equal to the a parameter...
-            if (rnd <= a)
+            if (rnd <= a && orderMatrix.GetOrderMatrix.Count < 20)
                 // Do a delete.
                 output = Delete(ctrlPM);
             // If it rolls higher than a or equal/below b...
-            else if (rnd <= a + b)
+            else if (rnd <= a + b + orderMatrix.GetOrderMatrix.Count / 100)
                 // Check if the orderMatrix if empty.
                 if (orderMatrix.GetOrderMatrix.Count != 0)
                     // If it isn't, do an Add.
                     output = Add(ctrlPM);
             // If it rolls higher than b.
             else
-                // Do a swap.
-                output = Delete(ctrlPM);
+                // Do a shift.
+                output = Shift(ctrlPM);
 
             // Return the boolean value that represents the type of operation (normal/accepted)
             return output;
