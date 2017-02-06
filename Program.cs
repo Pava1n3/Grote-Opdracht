@@ -34,7 +34,7 @@ namespace Grote_Opdracht
             int iterationBlock = 64;
             int checker = 0;
 
-            for (int x = 1; x <= 10000; x++)
+            for (int x = 1; x <= 100000; x++)
             {
                 // Every 4 * #interationBlock iterations, reset the counter.
                 if (x % (4 * iterationBlock) == 0)
