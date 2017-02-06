@@ -28,25 +28,29 @@ namespace Grote_Opdracht
             // Do Local Search
             Random random = new Random();
 
-            double ctrlPM = 150;
-            double breakPoint = 1.0;
+            double ctrlPM = 360;
+            double breakPoint = 0.0;
             double badResultCounter = 0;
             double iterationBlock = 128;
             double totalBCounter = 0;
             int checker = 0;
 
-            for (int x = 1; x <= 100000; x++)
+            for (int x = 1; x <= 1000000; x++)
             {
                 // Every 4 * #interationBlock iterations, reset the counter.
                 if (x % (4 * iterationBlock) == 0)
                 {
-                    double percentage = (badResultCounter + 4.0) / (4.0 * iterationBlock) * 100;
+                    double percentage = (badResultCounter) / (4.0 * iterationBlock) * 100;
                     badResultCounter = 0;
+
+                    //Console.WriteLine("Percentage: {0}", percentage);
 
                     // If the amount of accepted bad results is below the breakPoint value...
                     if (percentage < breakPoint)
+                    {
                         // We stop the iteration process.
                         break;
+                    }
                 }
 
                 // Every #interationBlock iterations, change SOMETHING.
@@ -55,12 +59,14 @@ namespace Grote_Opdracht
                     ctrlPM *= 0.99f;
                 }
 
-                bool op = LS.RandomOperation(0.05, 0.45, ctrlPM);
-
+                bool op = LS.RandomOperation(0.2, 0.2, 0.2, ctrlPM);
                 if (!op)
                 { badResultCounter++; totalBCounter++; }
 
                 checker = x;
+
+                if (x % 1000 == 0)
+                    Console.WriteLine("Number of Iterations: {0}", checker);
             }
 
             StreamWriter sw = new StreamWriter(@"..\..\Solution.txt");
@@ -80,6 +86,7 @@ namespace Grote_Opdracht
             Console.WriteLine("Total Adds:     {0} | {1}", LS.adds, LS.bAdds);
             Console.WriteLine("Total Deletes:  {0} | {1}", LS.deletes, LS.bDeletes);
             Console.WriteLine("Total Shifts:   {0} | {1}", LS.shifts, LS.bShifts);
+            Console.WriteLine("Total Swaps:    {0} | {1}", LS.swaps, LS.bSwaps);
             Console.WriteLine("Total Accepted: {0}", totalBCounter);
 
 
