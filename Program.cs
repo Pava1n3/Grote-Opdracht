@@ -35,7 +35,7 @@ namespace Grote_Opdracht
             double totalBCounter = 0;
             int checker = 0;
 
-            for (int x = 1; x <= 1000000; x++)
+            for (int x = 1; x <= 5000000; x++)
             {
                 // Every 4 * #interationBlock iterations, reset the counter.
                 if (x % (4 * iterationBlock) == 0)
