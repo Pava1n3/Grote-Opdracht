@@ -503,7 +503,7 @@ namespace Grote_Opdracht
                         week.GetWeek[x].UpdateRoutes();
                         // Check if the solution for the whole day is still feasible.
 
-                        if (!(WORKINGDAY < week.GetWeek[x].Costs()))
+                        if (!(WORKINGDAY < week.GetWeek[x].Costs() || week.GetWeek[x].GetRoutes[y].TotalLoad() > MAXLOAD))
                         {
                             // If it is, calculate the newTime for the day with the added order.
                             double newTime = oTime - week.GetWeek[x].Costs();

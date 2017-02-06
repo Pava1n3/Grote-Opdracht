@@ -28,14 +28,13 @@ namespace Grote_Opdracht
             // Do Local Search
             Random random = new Random();
 
-            double ctrlPM = 360;
+            double ctrlPM = 500;
             double breakPoint = 0.0;
             double badResultCounter = 0;
-            double iterationBlock = 128;
+            double iterationBlock = 512;
             double totalBCounter = 0;
             int checker = 0;
-
-            for (int x = 1; x <= 5000000; x++)
+            for (int x = 1; x <= 5000; x++)
             {
                 // Every 4 * #interationBlock iterations, reset the counter.
                 if (x % (4 * iterationBlock) == 0)
@@ -56,7 +55,7 @@ namespace Grote_Opdracht
                 // Every #interationBlock iterations, change SOMETHING.
                 if (x % iterationBlock == 0)
                 {
-                    ctrlPM *= 0.99f;
+                    ctrlPM *= 0.999f;
                 }
 
                 bool op = LS.RandomOperation(0.2, 0.2, 0.2, ctrlPM);
