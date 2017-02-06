@@ -24,6 +24,9 @@ namespace Grote_Opdracht
         DistanceMatrix distanceMatrix;
         Random random = new Random();
 
+        // Checkers
+        public int adds, deletes, shifts, bAdds, bDeletes, bShifts;
+
         public LocalSearch(Week week, OrderMatrix orderMatrix, DistanceMatrix distanceMatrix)
         {
             this.week = week;
@@ -85,8 +88,9 @@ namespace Grote_Opdracht
                     {
                         orderMatrix.GetOrderMatrix.Add(order.orderId, order);
                         week.GetWeek[rndRoute.Item1].UpdateRoutes();
+                        bDeletes++;
                         return false;
-                    }                       
+                    }
                 }
             }
             return true;
@@ -255,9 +259,10 @@ namespace Grote_Opdracht
                         //Update Routes
                         tarDay.UpdateRoutes();
                         startDay.UpdateRoutes();
+                        bShifts++;
 
                         //Change some bits if necessary
-                        if(order.frequency == 4 && startDay.DayNumber != tarDay.DayNumber)
+                        if (order.frequency == 4 && startDay.DayNumber != tarDay.DayNumber)
                         {
                             order.SetBit(startDay.DayNumber, false);
                             order.SetBit(tarDay.DayNumber, true);
@@ -472,32 +477,36 @@ namespace Grote_Opdracht
 
         public bool Add(double ctrlPM)
         {
-            Tuple<int, int, int> possibility;
+            Tuple<int, int, int> possibility = new Tuple<int, int, int>(0, 0, 0);
             int[] keys = orderMatrix.GetOrderMatrix.Keys.ToArray();
             int key = keys[random.Next(keys.Length)];
             Order order = orderMatrix.GetOrderMatrix[key];
 
-            double best = double.MaxValue;
+            double oTime = 0;
+            double best = double.MinValue;
 
             // Check in what place we can actually add the order, starting...
             // For every day in week...
             for (int x = 0; x < week.GetWeek.Count; x++)
-            {// For every route in day...
+                // For every route in day...
                 for (int y = 0; y < week.GetWeek[x].GetRoutes.Count; y++)
                     // For every order in route...
                     for (int z = 0; z < week.GetWeek[x].GetRoutes[y].GetRoute.Count; z++)
                     {
+                        // Calculate the original time of the day with the added penalty.
+                        oTime = week.GetWeek[x].Costs() + order.totalEmptyingTime * 3;
                         // Insert the order on the 'z' index.
                         week.GetWeek[x].GetRoutes[y].GetRoute.Insert(z, order);
                         // Update everything
                         week.GetWeek[x].UpdateRoutes();
                         // Check if the solution for the whole day is still feasible.
+
                         if (!(WORKINGDAY < week.GetWeek[x].Costs()))
                         {
-                            // If it is, calculate the newTime for the route with the added order.
-                            double newTime = week.GetWeek[x].GetRoutes[y].TotalTime();
+                            // If it is, calculate the newTime for the day with the added order.
+                            double newTime = oTime - week.GetWeek[x].Costs();
                             // If the time is better than previous tested additions or if it is the first iteration...
-                            if (newTime < best)
+                            if (best < newTime)
                             {
                                 // Update the values.
                                 best = newTime;
@@ -505,11 +514,43 @@ namespace Grote_Opdracht
                             }
 
                         }
+
+                        // Reinsert the order.
                         week.GetWeek[x].GetRoutes[y].GetRoute.RemoveAt(z);
+                        // And reset the values.
+                        week.GetWeek[x].UpdateRoutes();
+
+                        // If this is the last iteration...
+                        if (x == week.GetWeek.Count - 1 && y == week.GetWeek[x].GetRoutes.Count - 1 && z == week.GetWeek[x].GetRoutes[y].GetRoute.Count - 1)
+                        {
+                            // If the addition is a TimeIncrease, run the acceptation Method.
+                            if (best < 0)
+                            {
+                                // Make an acceptationFlag.
+                                bool accept = AcceptOperation(ctrlPM, best);
+                                // If the addition is accepted (always when it isn't a TimeIncrease)...
+                                if (accept)
+                                {
+                                    // Add the order on the optimal spot.
+                                    orderMatrix.GetOrderMatrix.Remove(key);
+                                    week.GetWeek[possibility.Item1].GetRoutes[possibility.Item2].GetRoute.Insert(possibility.Item3, order);
+                                    week.GetWeek[possibility.Item1].UpdateRoutes();
+                                    bAdds++;
+                                    return false;
+                                }
+                                else
+                                    return true;
+                            }
+                            // If the addition is an optimization...
+                            else
+                            {
+                                // Add the order on the optimal spot.
+                                orderMatrix.GetOrderMatrix.Remove(key);
+                                week.GetWeek[possibility.Item1].GetRoutes[possibility.Item2].GetRoute.Insert(possibility.Item3, order);
+                                week.GetWeek[possibility.Item1].UpdateRoutes();
+                            }
+                        }
                     }
-
-            }
-
             return true;
         }
 
@@ -1527,18 +1568,27 @@ namespace Grote_Opdracht
 
             // If the number rolls to a value below/equal to the a parameter...
             if (rnd <= a && orderMatrix.GetOrderMatrix.Count < 20)
+            {
                 // Do a delete.
                 output = Delete(ctrlPM);
+                deletes++;
+            }
             // If it rolls higher than a or equal/below b...
             else if (rnd <= a + b + orderMatrix.GetOrderMatrix.Count / 100)
                 // Check if the orderMatrix if empty.
                 if (orderMatrix.GetOrderMatrix.Count != 0)
+                {
                     // If it isn't, do an Add.
                     output = Add(ctrlPM);
-            // If it rolls higher than b.
-            else
-                // Do a shift.
-                output = Shift(ctrlPM);
+                    adds++;
+                }
+                // If it rolls higher than b.
+                else
+                {
+                    // Do a shift.
+                    output = Shift(ctrlPM);
+                    shifts++;
+                }
 
             // Return the boolean value that represents the type of operation (normal/accepted)
             return output;

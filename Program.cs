@@ -28,10 +28,11 @@ namespace Grote_Opdracht
             // Do Local Search
             Random random = new Random();
 
-            double ctrlPM = 320;
+            double ctrlPM = 150;
             double breakPoint = 1.0;
             double badResultCounter = 0;
             double iterationBlock = 128;
+            double totalBCounter = 0;
             int checker = 0;
 
             for (int x = 1; x <= 100000; x++)
@@ -54,10 +55,10 @@ namespace Grote_Opdracht
                     ctrlPM *= 0.99f;
                 }
 
-                bool op = LS.RandomOperation(0.05, 0.4, ctrlPM);
+                bool op = LS.RandomOperation(0.05, 0.45, ctrlPM);
 
                 if (!op)
-                    badResultCounter++;
+                { badResultCounter++; totalBCounter++; }
 
                 checker = x;
             }
@@ -73,9 +74,13 @@ namespace Grote_Opdracht
             costs += weekSchedule.Costs();
             foreach (KeyValuePair<int, Order> order in oM.GetOrderMatrix)
                 decline += 3 * order.Value.totalEmptyingTime;
-            Console.WriteLine("Total Costs: {0}", costs + decline);
-            Console.WriteLine("Total Declines: {0}", decline);
-            Console.WriteLine("Total Schedule: {0}", costs);
+            Console.WriteLine("Total Costs:    {0} | {1}", costs + decline, (costs + decline) / 60);
+            Console.WriteLine("Total Declines: {0} | {1}", decline, decline / 60);
+            Console.WriteLine("Total Schedule: {0} | {1}", costs, costs / 60);
+            Console.WriteLine("Total Adds:     {0} | {1}", LS.adds, LS.bAdds);
+            Console.WriteLine("Total Deletes:  {0} | {1}", LS.deletes, LS.bDeletes);
+            Console.WriteLine("Total Shifts:   {0} | {1}", LS.shifts, LS.bShifts);
+            Console.WriteLine("Total Accepted: {0}", totalBCounter);
 
 
             Console.ReadKey();
